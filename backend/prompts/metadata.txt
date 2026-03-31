@@ -1,0 +1,19 @@
+You are analyzing the first page of an academic paper.
+Extract the paper's metadata and return ONLY valid JSON matching the schema below. No markdown, no preamble, no explanation.
+
+Schema:
+{
+  "title": "full paper title as written",
+  "authors": ["Author Name 1", "Author Name 2"],
+  "year": 2024,
+  "venue": "conference or journal name, e.g. OSDI, NeurIPS, SOSP",
+  "institution": "primary institution or affiliation"
+}
+
+Rules:
+- title: exact title from the paper, preserve capitalization
+- authors: list of full author names as they appear on the page
+- year: integer year of publication if visible, otherwise null
+- venue: short canonical name if visible (e.g. "OSDI '23" becomes "OSDI"), otherwise null
+- institution: primary institution or affiliation of first author, otherwise null
+- If a field is not visible on this page, use null
