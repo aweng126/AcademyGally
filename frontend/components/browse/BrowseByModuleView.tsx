@@ -4,21 +4,26 @@ import { useEffect, useState } from "react";
 import type { ContentItem, ModuleType } from "@/lib/types";
 import { getContent } from "@/lib/api";
 import FigureGrid from "./FigureGrid";
+import CompareView from "./CompareView";
 
-const MODULE_TABS: { value: ModuleType; label: string }[] = [
+type ActiveTab = ModuleType | "compare";
+
+const MODULE_TABS: { value: ActiveTab; label: string }[] = [
   { value: "arch_figure", label: "Arch figures" },
   { value: "abstract", label: "Abstract" },
   { value: "eval_figure", label: "Eval figures" },
   { value: "algorithm", label: "Algorithm" },
+  { value: "compare", label: "Compare" },
 ];
 
 export default function BrowseByModuleView() {
-  const [activeModule, setActiveModule] = useState<ModuleType>("arch_figure");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("arch_figure");
   const [items, setItems] = useState<ContentItem[]>([]);
 
   useEffect(() => {
-    getContent({ module_type: activeModule }).then(setItems).catch(console.error);
-  }, [activeModule]);
+    if (activeTab === "compare") return;
+    getContent({ module_type: activeTab as ModuleType }).then(setItems).catch(console.error);
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,9 +31,9 @@ export default function BrowseByModuleView() {
         {MODULE_TABS.map(({ value, label }) => (
           <button
             key={value}
-            onClick={() => setActiveModule(value)}
+            onClick={() => setActiveTab(value)}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-              activeModule === value
+              activeTab === value
                 ? "bg-gray-900 text-white"
                 : "text-gray-600 hover:bg-gray-100"
             }`}
@@ -37,7 +42,11 @@ export default function BrowseByModuleView() {
           </button>
         ))}
       </div>
-      <FigureGrid items={items} />
+      {activeTab === "compare" ? (
+        <CompareView />
+      ) : (
+        <FigureGrid items={items} />
+      )}
     </div>
   );
 }

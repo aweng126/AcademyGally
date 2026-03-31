@@ -18,4 +18,5 @@ COPY . .
 
 RUN mkdir -p /data/figures /data/pdfs
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations then start server
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]

@@ -6,16 +6,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from database import Base, engine
+from database import Base
 from routers import papers, content, topics
 from services.arch_figure_extractor import ArchFigureExtractor
 from services.abstract_extractor import AbstractExtractor
 from services.eval_figure_extractor import EvalFigureExtractor
 from services.algorithm_extractor import AlgorithmExtractor
 from services.module_registry import registry
-
-# Create all tables
-Base.metadata.create_all(bind=engine)
 
 # Register module extractors
 registry.register(ArchFigureExtractor())
