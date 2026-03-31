@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Topic, ModuleType } from "@/lib/types";
-import { getTopic, updatePaperProgress } from "@/lib/api";
+import { getTopic } from "@/lib/api";
 import StudyFocusSelector, { type StudyFocus, getStoredFocus } from "./StudyFocusSelector";
-import PaperProgressRow from "./PaperProgressRow";
+import SeriesPaperRow from "./SeriesPaperRow";
 
 const FOCUS_MODULE_MAP: Record<StudyFocus, ModuleType[]> = {
   all: ["abstract", "arch_figure", "eval_figure"],
@@ -26,19 +27,13 @@ export default function TopicStudyPage({ topicId }: { topicId: string }) {
       .finally(() => setLoading(false));
   }, [topicId]);
 
-  const handleToggleModule = async (paperId: string, module: string, done: boolean) => {
-    if (!topic) return;
-    const tp = topic.papers?.find((p) => p.paper_id === paperId);
-    if (!tp) return;
-
-    const updated = { ...tp.progress_json, [module]: done };
-    await updatePaperProgress(topicId, paperId, updated);
+  const handleProgressUpdate = (paperId: string, progress: Record<string, boolean>) => {
     setTopic((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         papers: prev.papers?.map((p) =>
-          p.paper_id === paperId ? { ...p, progress_json: updated } : p
+          p.paper_id === paperId ? { ...p, progress_json: progress } : p
         ),
       };
     });
@@ -52,30 +47,40 @@ export default function TopicStudyPage({ topicId }: { topicId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl flex flex-col gap-4 p-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Link href="/?view=topic" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
+            ← Topics
+          </Link>
           <h1 className="text-xl font-bold">{topic.name}</h1>
           {topic.description && (
             <p className="mt-1 text-sm text-gray-500">{topic.description}</p>
           )}
+          <p className="mt-0.5 text-xs text-gray-400">{papers.length} papers</p>
         </div>
         <StudyFocusSelector value={focus} onChange={setFocus} />
       </div>
 
+      {/* Papers series */}
       {papers.length === 0 ? (
         <div className="rounded-lg border bg-white p-10 text-center text-sm text-gray-400">
-          No papers in this topic yet.
+          No papers in this topic yet. Add papers from the{" "}
+          <Link href="/?view=library" className="text-blue-600 hover:underline">
+            Library
+          </Link>
+          .
         </div>
       ) : (
-        <div className="divide-y rounded-lg border bg-white">
+        <div className="divide-y rounded-lg border bg-white overflow-hidden">
           {papers.map((tp) => (
-            <div key={tp.paper_id} className="px-5">
-              <PaperProgressRow
-                tp={tp}
-                visibleModules={focusModules}
-                onToggle={handleToggleModule}
-              />
-            </div>
+            <SeriesPaperRow
+              key={tp.paper_id}
+              tp={tp}
+              topicId={topicId}
+              visibleModules={focusModules}
+              onProgressUpdate={handleProgressUpdate}
+            />
           ))}
         </div>
       )}

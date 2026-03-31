@@ -49,7 +49,12 @@ def _paper_out(paper: Paper, items: list[ContentItem]) -> dict:
 # ---------------------------------------------------------------------------
 
 def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
-    """Extract images from PDF and create pending ContentItems."""
+    """
+    Background pipeline:
+    1. Extract all images → create ContentItems (module_type='other', awaiting human confirm)
+    2. Auto-detect abstract text → create ContentItem (module_type='abstract') and
+       immediately trigger VLM analysis (no human confirmation required for text modules)
+    """
     db = SessionLocal()
     try:
         paper = db.query(Paper).filter(Paper.id == paper_id).first()
@@ -58,9 +63,9 @@ def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
         paper.processing_status = "processing"
         db.commit()
 
+        # --- Step 1: extract images ---
         output_dir = os.path.join(FIGURES_DIR, paper_id)
         extracted = extract_images_from_pdf(pdf_path, output_dir, paper_id)
-
         for item in extracted:
             ci = ContentItem(
                 id=str(uuid.uuid4()),
@@ -73,6 +78,28 @@ def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
             )
             db.add(ci)
 
+        # --- Step 2: auto-extract abstract ---
+        abstract_item_id: str | None = None
+        try:
+            from services.abstract_extractor import extract_abstract_text
+            abstract_text = extract_abstract_text(pdf_path)
+            if abstract_text:
+                abstract_id = str(uuid.uuid4())
+                abstract_ci = ContentItem(
+                    id=abstract_id,
+                    paper_id=paper_id,
+                    module_type="abstract",
+                    image_path=None,
+                    page_number=1,
+                    # caption stores the raw extracted text (useful for display & analysis)
+                    caption=abstract_text,
+                    processing_status="pending",
+                )
+                db.add(abstract_ci)
+                abstract_item_id = abstract_id
+        except Exception:
+            pass  # Abstract extraction failure is non-fatal
+
         paper.processing_status = "done"
         db.commit()
     except Exception:
@@ -81,12 +108,21 @@ def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
         if paper:
             paper.processing_status = "failed"
             db.commit()
+        return
     finally:
         db.close()
 
+    # Trigger abstract VLM analysis outside the DB session (non-fatal)
+    if abstract_item_id:
+        _analyze_item_bg(abstract_item_id)
+
 
 def _analyze_item_bg(item_id: str) -> None:
-    """Run VLM analysis on a confirmed ContentItem and store result."""
+    """
+    Run VLM analysis on a confirmed ContentItem and store result.
+    - Image modules (arch_figure, eval_figure): call analyze_image()
+    - Text modules (abstract): read text from caption, call analyze_text()
+    """
     db = SessionLocal()
     try:
         item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
@@ -96,10 +132,18 @@ def _analyze_item_bg(item_id: str) -> None:
         item.processing_status = "processing"
         db.commit()
 
-        result = analyze_image(item.image_path, item.module_type)
+        if item.module_type == "abstract":
+            if not item.caption:
+                item.processing_status = "failed"
+                db.commit()
+                return
+            from services.vlm_analyzer import analyze_text
+            result = analyze_text(item.caption, item.module_type)
+        else:
+            result = analyze_image(item.image_path, item.module_type)
+
         item.analysis_json = json.dumps(result)
 
-        # Embed asynchronously — non-fatal if fastembed not available
         try:
             from services.embedder import embed_analysis
             item.embedding_vector = embed_analysis(result)

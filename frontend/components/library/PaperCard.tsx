@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Paper } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ModuleChip from "./ModuleChip";
+import AddToTopicButton from "@/components/shared/AddToTopicButton";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -46,22 +47,17 @@ export default function PaperCard({ paper }: { paper: Paper }) {
         </div>
 
         {/* Action links */}
-        <div className="mt-1 flex gap-3 text-xs">
+        <div className="mt-1 flex flex-wrap items-center gap-3">
           {hasUnclassified && (
             <Link
               href={`/papers/${paper.id}/confirm`}
-              className="text-blue-600 hover:underline"
+              className="text-xs text-blue-600 hover:underline"
             >
               Classify figures →
             </Link>
           )}
-          {paper.processing_status === "done" && !hasUnclassified && items.length > 0 && (
-            <Link
-              href={`/papers/${paper.id}`}
-              className="text-gray-500 hover:underline"
-            >
-              View analysis →
-            </Link>
+          {paper.processing_status === "done" && (
+            <AddToTopicButton paperId={paper.id} compact />
           )}
         </div>
       </div>

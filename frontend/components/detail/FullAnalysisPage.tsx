@@ -6,6 +6,7 @@ import type { Paper, ModuleType } from "@/lib/types";
 import { getFullAnalysis } from "@/lib/api";
 import ModuleAnalysisPanel from "./ModuleAnalysisPanel";
 import StatusBadge from "@/components/shared/StatusBadge";
+import AddToTopicButton from "@/components/shared/AddToTopicButton";
 
 const MODULE_ORDER: ModuleType[] = ["abstract", "arch_figure", "eval_figure", "algorithm"];
 
@@ -62,7 +63,10 @@ export default function FullAnalysisPage({ paperId }: { paperId: string }) {
         </Link>
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-xl font-bold leading-snug">{paper.title}</h1>
-          <StatusBadge status={paper.processing_status} />
+          <div className="flex shrink-0 items-center gap-2">
+            <AddToTopicButton paperId={paper.id} />
+            <StatusBadge status={paper.processing_status} />
+          </div>
         </div>
         {(paper.authors || paper.venue || paper.year) && (
           <p className="text-sm text-gray-500">
