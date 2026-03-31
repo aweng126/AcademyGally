@@ -6,7 +6,8 @@ services:
     env_file:
       - ./backend/.env
     volumes:
-      - app_data:/data
+      # Bind mount to project-local ./data so PDFs/figures/DB stay in the repo directory
+      - ./data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -28,6 +29,3 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
-volumes:
-  app_data:

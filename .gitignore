@@ -14,8 +14,12 @@ build/
 *.db
 *.sqlite3
 
-# Data
-data/
+# Data — ignore content but keep directory structure via .gitkeep
+data/**
+!data/figures/
+!data/figures/.gitkeep
+!data/pdfs/
+!data/pdfs/.gitkeep
 
 # Node
 frontend/node_modules/
