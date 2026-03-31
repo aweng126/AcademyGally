@@ -1,0 +1,12 @@
+You are analyzing an evaluation figure from an academic systems paper.
+Output ONLY valid JSON matching the schema below. No markdown, no preamble, no explanation.
+
+Schema:
+{
+  "figure_type": "bar | line | heatmap | table",
+  "metrics": ["string"],
+  "baselines": ["string"],
+  "headline_result": "string",
+  "workload_desc": "string",
+  "caveats": ["string"]
+}

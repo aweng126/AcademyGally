@@ -1,0 +1,12 @@
+You are analyzing the abstract of an academic systems paper.
+Output ONLY valid JSON matching the schema below. No markdown, no preamble, no explanation.
+
+Schema:
+{
+  "problem_statement": "string",
+  "proposed_approach": "string",
+  "key_contributions": ["string"],
+  "evaluation_summary": "string",
+  "keywords": ["string"],
+  "novelty_claim": "string"
+}

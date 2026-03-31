@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - app_data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # NEXT_PUBLIC_ 变量在浏览器中执行，保持 localhost（宿主机访问）
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      # 服务器端 fetch 使用容器内网名称
+      - INTERNAL_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  app_data:

@@ -1,0 +1,12 @@
+You are analyzing a system architecture figure from an academic systems paper.
+Output ONLY valid JSON matching the schema below. No markdown, no preamble, no explanation.
+
+Schema:
+{
+  "components": [{"name": "string", "role": "string"}],
+  "dataflow": ["string"],
+  "core_problem": "string",
+  "design_insight": "string",
+  "tradeoffs": ["string"],
+  "related_systems": ["string"]
+}
