@@ -12,6 +12,7 @@ const LABELS: Record<ModuleType, string> = {
   abstract: "Abstract",
   eval_figure: "Eval",
   algorithm: "Algo",
+  other: "Other",
 };
 
 export default function ModuleChip({
