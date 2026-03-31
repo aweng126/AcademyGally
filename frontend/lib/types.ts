@@ -1,5 +1,5 @@
 export type ProcessingStatus = "pending" | "processing" | "done" | "failed";
-export type ModuleType = "arch_figure" | "abstract" | "eval_figure" | "algorithm";
+export type ModuleType = "arch_figure" | "abstract" | "eval_figure" | "algorithm" | "other";
 
 export interface Paper {
   id: string;
@@ -22,7 +22,7 @@ export interface ContentItem {
   page_number: number | null;
   caption: string | null;
   analysis_json: ArchFigureAnalysis | AbstractAnalysis | EvalFigureAnalysis | null;
-  processing_status: "pending" | "done" | "failed";
+  processing_status: ProcessingStatus;
   created_at: string;
 }
 
@@ -65,7 +65,7 @@ export interface TopicPaper {
   topic_id: string;
   paper_id: string;
   order: number;
-  progress_json: Record<ModuleType, boolean>;
+  progress_json: Record<string, boolean>;
   paper?: Paper;
 }
 

@@ -1,12 +1,21 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from database import Base, engine
 from routers import papers, content, topics
+from services.arch_figure_extractor import ArchFigureExtractor
+from services.module_registry import registry
 
+# Create all tables
 Base.metadata.create_all(bind=engine)
+
+# Register module extractors
+registry.register(ArchFigureExtractor())
 
 app = FastAPI(title="AcademyGally API", version="0.1.0")
 

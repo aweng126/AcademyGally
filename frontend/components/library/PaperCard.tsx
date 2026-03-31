@@ -3,35 +3,68 @@ import type { Paper } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ModuleChip from "./ModuleChip";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 export default function PaperCard({ paper }: { paper: Paper }) {
-  const archFigure = paper.content_items?.find((i) => i.module_type === "arch_figure");
+  const items = paper.content_items ?? [];
+  const archFigure = items.find((i) => i.module_type === "arch_figure" && i.image_path);
+  const hasUnclassified =
+    paper.processing_status === "done" && items.some((i) => i.module_type === "other");
 
   return (
-    <Link
-      href={`/papers/${paper.id}`}
-      className="flex gap-4 rounded-lg border bg-white p-4 shadow-sm transition hover:shadow-md"
-    >
-      {archFigure?.image_path && (
+    <div className="flex gap-4 rounded-lg border bg-white p-4 shadow-sm transition hover:shadow-md">
+      {/* Arch figure thumbnail */}
+      {archFigure?.image_path ? (
         <img
-          src={`http://localhost:8000/figures/${archFigure.image_path}`}
+          src={`${API_URL}/figures/${archFigure.image_path}`}
           alt="arch figure thumbnail"
-          className="h-20 w-28 shrink-0 rounded object-cover"
+          className="h-20 w-28 shrink-0 rounded object-cover bg-gray-50"
         />
+      ) : (
+        <div className="h-20 w-28 shrink-0 rounded bg-gray-100" />
       )}
+
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate font-medium">{paper.title}</p>
+        <Link
+          href={`/papers/${paper.id}`}
+          className="truncate font-medium hover:underline"
+        >
+          {paper.title}
+        </Link>
         <p className="text-sm text-gray-500">
-          {paper.venue} {paper.year}
+          {[paper.authors, paper.venue, paper.year].filter(Boolean).join(" · ")}
         </p>
-        <div className="mt-1 flex items-center gap-2">
+
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <StatusBadge status={paper.processing_status} />
           {(["arch_figure", "abstract", "eval_figure"] as const).map((mt) => {
-            const item = paper.content_items?.find((i) => i.module_type === mt);
-            if (!item) return null;
-            return <ModuleChip key={mt} moduleType={mt} status={item.processing_status} />;
+            const item = items.find((i) => i.module_type === mt);
+            return item ? (
+              <ModuleChip key={mt} moduleType={mt} status={item.processing_status} />
+            ) : null;
           })}
         </div>
+
+        {/* Action links */}
+        <div className="mt-1 flex gap-3 text-xs">
+          {hasUnclassified && (
+            <Link
+              href={`/papers/${paper.id}/confirm`}
+              className="text-blue-600 hover:underline"
+            >
+              Classify figures →
+            </Link>
+          )}
+          {paper.processing_status === "done" && !hasUnclassified && items.length > 0 && (
+            <Link
+              href={`/papers/${paper.id}`}
+              className="text-gray-500 hover:underline"
+            >
+              View analysis →
+            </Link>
+          )}
+        </div>
       </div>
-    </Link>
+    </div>
   );
 }
