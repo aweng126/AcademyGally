@@ -35,6 +35,7 @@ class PaperOut(BaseModel):
     year: Optional[int] = None
     authors: Optional[str] = None
     doi: Optional[str] = None
+    institution: Optional[str] = None
     pdf_path: str
     processing_status: str
     uploaded_at: datetime
@@ -89,3 +90,35 @@ class ConfirmItemEntry(BaseModel):
 
 class ConfirmItemsRequest(BaseModel):
     confirmations: list[ConfirmItemEntry]
+
+
+class VlmMetadataResult(BaseModel):
+    title: Optional[str] = None
+    authors: Optional[list[str]] = None
+    year: Optional[int] = None
+    venue: Optional[str] = None
+    institution: Optional[str] = None
+
+
+class ScholarSuggestion(BaseModel):
+    title: Optional[str] = None
+    authors: Optional[list[str]] = None
+    year: Optional[int] = None
+    venue: Optional[str] = None
+    doi: Optional[str] = None
+
+
+class PaperMetadataResponse(BaseModel):
+    id: str
+    status: str
+    vlm_result: Optional[VlmMetadataResult] = None
+    scholar_suggestion: Optional[ScholarSuggestion] = None
+
+
+class MetadataConfirm(BaseModel):
+    title: str
+    authors: Optional[str] = None
+    year: Optional[int] = None
+    venue: Optional[str] = None
+    institution: Optional[str] = None
+    doi: Optional[str] = None
