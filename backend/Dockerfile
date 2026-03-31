@@ -10,13 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the fastembed model so it's baked into the image
-# (avoids a slow download on first search request at runtime)
-RUN python -c "from fastembed import TextEmbedding; list(TextEmbedding('BAAI/bge-small-en-v1.5').embed(['warmup']))"
-
 COPY . .
 
 RUN mkdir -p /data/figures /data/pdfs
 
-# Run migrations then start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Run migrations, pre-download fastembed model (cached in /root/.cache), then start server
+CMD ["sh", "-c", "alembic upgrade head && python -c \"from fastembed import TextEmbedding; list(TextEmbedding('BAAI/bge-small-en-v1.5').embed(['warmup']))\" && uvicorn main:app --host 0.0.0.0 --port 8000"]

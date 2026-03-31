@@ -8,6 +8,8 @@ services:
     volumes:
       # Bind mount to project-local ./data so PDFs/figures/DB stay in the repo directory
       - ./data:/data
+      # Cache fastembed model between container restarts (avoids re-download)
+      - fastembed-cache:/root/.cache/fastembed
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -29,3 +31,6 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  fastembed-cache:
