@@ -14,5 +14,5 @@ COPY . .
 
 RUN mkdir -p /data/figures /data/pdfs
 
-# Run migrations, pre-download fastembed model (cached in /root/.cache), then start server
-CMD ["sh", "-c", "alembic upgrade head && python -c \"from fastembed import TextEmbedding; list(TextEmbedding('BAAI/bge-small-en-v1.5').embed(['warmup']))\" && uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Run migrations then start server (fastembed model downloads lazily on first search request)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
