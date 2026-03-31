@@ -55,6 +55,9 @@ export const searchContent = (q: string, module_type?: string) => {
   return request<ContentItem[]>(`/content/search?${new URLSearchParams(params)}`);
 };
 
+export const getSimilarItems = (itemId: string, topK = 5) =>
+  request<ContentItem[]>(`/content/${itemId}/similar?top_k=${topK}`);
+
 export const getAnnotations = (itemId: string) =>
   request<UserAnnotation[]>(`/content/${itemId}/annotations`);
 

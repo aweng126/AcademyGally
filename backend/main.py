@@ -10,6 +10,8 @@ from database import Base, engine
 from routers import papers, content, topics
 from services.arch_figure_extractor import ArchFigureExtractor
 from services.abstract_extractor import AbstractExtractor
+from services.eval_figure_extractor import EvalFigureExtractor
+from services.algorithm_extractor import AlgorithmExtractor
 from services.module_registry import registry
 
 # Create all tables
@@ -18,6 +20,8 @@ Base.metadata.create_all(bind=engine)
 # Register module extractors
 registry.register(ArchFigureExtractor())
 registry.register(AbstractExtractor())
+registry.register(EvalFigureExtractor())
+registry.register(AlgorithmExtractor())
 
 app = FastAPI(title="AcademyGally API", version="0.1.0")
 

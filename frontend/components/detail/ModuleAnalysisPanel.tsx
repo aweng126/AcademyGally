@@ -2,6 +2,7 @@ import type { ContentItem } from "@/lib/types";
 import ArchFigurePanel from "./ArchFigurePanel";
 import AbstractPanel from "./AbstractPanel";
 import EvalFigurePanel from "./EvalFigurePanel";
+import AlgorithmPanel from "./AlgorithmPanel";
 
 export default function ModuleAnalysisPanel({ item }: { item: ContentItem }) {
   const titles: Record<string, string> = {
@@ -17,9 +18,7 @@ export default function ModuleAnalysisPanel({ item }: { item: ContentItem }) {
       {item.module_type === "arch_figure" && <ArchFigurePanel item={item} />}
       {item.module_type === "abstract" && <AbstractPanel item={item} />}
       {item.module_type === "eval_figure" && <EvalFigurePanel item={item} />}
-      {item.module_type === "algorithm" && (
-        <p className="text-sm text-gray-400">Algorithm panel — Phase 3</p>
-      )}
+      {item.module_type === "algorithm" && <AlgorithmPanel item={item} />}
     </section>
   );
 }

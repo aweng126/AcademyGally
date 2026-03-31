@@ -143,6 +143,38 @@ def add_annotation(item_id: str, body: AnnotationCreate, db: Session = Depends(g
     return _annotation_out(ann)
 
 
+@router.get("/{item_id}/similar")
+def get_similar_items(item_id: str, top_k: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)):
+    """
+    Find ContentItems similar to the given item using embedding similarity.
+    Excludes the item itself. Falls back to empty list if embeddings unavailable.
+    """
+    item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="ContentItem not found")
+
+    if not item.embedding_vector or not item.analysis_json:
+        return []
+
+    try:
+        from services.embedder import search_similar
+        # Search using the stored analysis_json as query text
+        ids = search_similar(
+            query=item.analysis_json,  # TEXT column — always str in ORM
+            module_type=item.module_type,
+            top_k=top_k + 1,  # +1 to account for self
+        )
+        ids = [i for i in ids if i != item_id][:top_k]
+        if not ids:
+            return []
+        items = db.query(ContentItem).filter(ContentItem.id.in_(ids)).all()
+        order = {id_: i for i, id_ in enumerate(ids)}
+        items.sort(key=lambda x: order.get(x.id, 999))
+        return [_item_out(i) for i in items]
+    except Exception:
+        return []
+
+
 @router.delete("/{item_id}/annotations/{annotation_id}")
 def delete_annotation(item_id: str, annotation_id: str, db: Session = Depends(get_db)):
     ann = db.query(UserAnnotation).filter(

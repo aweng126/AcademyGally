@@ -1,0 +1,39 @@
+You are analyzing an algorithm or pseudocode block from an academic systems paper.
+Output ONLY valid JSON matching the schema below. No markdown, no preamble, no explanation.
+
+Schema:
+{
+  "algorithm_name": "string",
+  "purpose": "string",
+  "inputs": ["string"],
+  "outputs": ["string"],
+  "key_steps": ["string"],
+  "complexity": "string",
+  "novelty": "string"
+}
+
+Fields:
+- algorithm_name: Name or title of the algorithm (e.g. "Raft Leader Election")
+- purpose: One sentence describing what problem this algorithm solves
+- inputs: List of algorithm inputs/parameters
+- outputs: List of outputs/return values
+- key_steps: List of the most important logical steps (3-7 items, concise)
+- complexity: Time/space complexity if stated or inferable, otherwise ""
+- novelty: What makes this algorithm design novel or non-obvious compared to prior work
+
+Example output:
+{
+  "algorithm_name": "Raft Leader Election",
+  "purpose": "Elect a single leader among replicas to coordinate log replication",
+  "inputs": ["current_term", "voted_for", "log_entries", "election_timeout"],
+  "outputs": ["leader_id", "current_term"],
+  "key_steps": [
+    "Follower increments term and transitions to candidate on timeout",
+    "Candidate sends RequestVote RPCs to all peers",
+    "Peer grants vote if candidate log is at least as up-to-date and peer hasn't voted this term",
+    "Candidate wins election with majority votes; broadcasts AppendEntries heartbeats",
+    "Any node receiving higher term reverts to follower"
+  ],
+  "complexity": "O(n) messages per election round (n = cluster size)",
+  "novelty": "Randomized election timeouts eliminate split-vote livelock without requiring a separate view-change protocol"
+}

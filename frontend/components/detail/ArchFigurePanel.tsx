@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ContentItem, ArchFigureAnalysis, UserAnnotation } from "@/lib/types";
-import { getAnnotations, addAnnotation, deleteAnnotation } from "@/lib/api";
+import { getAnnotations, addAnnotation, deleteAnnotation, getSimilarItems } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type Tab = "analysis" | "notes";
+type Tab = "analysis" | "related" | "notes";
 
 export default function ArchFigurePanel({ item }: { item: ContentItem }) {
   const a = item.analysis_json as ArchFigureAnalysis | null;
@@ -14,10 +15,19 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
   const [notes, setNotes] = useState<UserAnnotation[]>([]);
   const [noteInput, setNoteInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [similar, setSimilar] = useState<ContentItem[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
 
   useEffect(() => {
     if (activeTab === "notes") {
       getAnnotations(item.id).then(setNotes).catch(console.error);
+    }
+    if (activeTab === "related" && similar.length === 0) {
+      setLoadingSimilar(true);
+      getSimilarItems(item.id, 6)
+        .then(setSimilar)
+        .catch(console.error)
+        .finally(() => setLoadingSimilar(false));
     }
   }, [activeTab, item.id]);
 
@@ -118,10 +128,14 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
         )}
       </div>
 
-      {/* Tabs: Design decisions | My notes */}
+      {/* Tabs */}
       <div className="border-t pt-4">
         <div className="flex gap-1 border-b">
-          {(["analysis", "notes"] as Tab[]).map((tab) => (
+          {([
+            ["analysis", "Design decisions"],
+            ["related", "Related papers"],
+            ["notes", "My notes"],
+          ] as [Tab, string][]).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -131,7 +145,7 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab === "analysis" ? "Design decisions" : "My notes"}
+              {label}
             </button>
           ))}
         </div>
@@ -148,9 +162,44 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
             </div>
           )}
 
+          {activeTab === "related" && (
+            <div>
+              {loadingSimilar ? (
+                <p className="text-sm text-gray-400">Finding similar papers...</p>
+              ) : similar.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  No similar papers found yet. Similar papers appear after multiple arch figures
+                  have been analyzed.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {similar.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/papers/${s.paper_id}`}
+                      className="flex flex-col gap-2 rounded-lg border bg-gray-50 p-3 text-sm hover:bg-white hover:shadow-sm transition"
+                    >
+                      {s.image_path && (
+                        <img
+                          src={`${API_URL}/figures/${s.image_path}`}
+                          alt="arch figure"
+                          className="aspect-video w-full rounded object-contain bg-white"
+                        />
+                      )}
+                      <p className="line-clamp-2 text-xs text-gray-600">
+                        {(s.analysis_json as ArchFigureAnalysis | null)?.core_problem ??
+                          s.caption ??
+                          "Arch figure"}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "notes" && (
             <div className="flex flex-col gap-4">
-              {/* Note input */}
               <div className="flex gap-2">
                 <textarea
                   value={noteInput}
@@ -168,7 +217,6 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
                 </button>
               </div>
 
-              {/* Notes list */}
               {notes.length === 0 ? (
                 <p className="text-sm text-gray-400">No notes yet.</p>
               ) : (

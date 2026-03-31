@@ -21,7 +21,7 @@ export interface ContentItem {
   image_path: string | null;
   page_number: number | null;
   caption: string | null;
-  analysis_json: ArchFigureAnalysis | AbstractAnalysis | EvalFigureAnalysis | null;
+  analysis_json: ArchFigureAnalysis | AbstractAnalysis | EvalFigureAnalysis | AlgorithmAnalysis | null;
   processing_status: ProcessingStatus;
   created_at: string;
 }
@@ -51,6 +51,16 @@ export interface EvalFigureAnalysis {
   headline_result: string;
   workload_desc: string;
   caveats: string[];
+}
+
+export interface AlgorithmAnalysis {
+  algorithm_name: string;
+  purpose: string;
+  inputs: string[];
+  outputs: string[];
+  key_steps: string[];
+  complexity: string;
+  novelty: string;
 }
 
 export interface Topic {
