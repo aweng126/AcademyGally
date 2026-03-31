@@ -14,6 +14,7 @@ export default function TopicStudyView() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     setFocus(getStoredFocus());
@@ -27,10 +28,13 @@ export default function TopicStudyView() {
     e.preventDefault();
     if (!name.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const t = await createTopic({ name: name.trim(), description: description.trim() || undefined });
       setTopics((prev) => [t, ...prev]);
       setName(""); setDescription(""); setShowForm(false);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create topic.");
     } finally {
       setCreating(false);
     }
@@ -66,6 +70,9 @@ export default function TopicStudyView() {
               onChange={(e) => setDescription(e.target.value)}
               className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
             />
+            {createError && (
+              <p className="text-xs text-red-500">{createError}</p>
+            )}
             <button
               type="submit"
               disabled={creating}

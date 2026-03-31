@@ -2,6 +2,12 @@ import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation } from "./ty
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -9,7 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status} ${path}: ${text}`);
+    throw new ApiError(res.status, `API ${res.status} ${path}: ${text}`);
   }
   return res.json();
 }

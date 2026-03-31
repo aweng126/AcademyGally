@@ -14,6 +14,8 @@ _ABSTRACT_PATTERNS = [
     r"(?:^|\n)[ \t]*(?:Abstract|ABSTRACT)[ \t]*\r?\n(.*?)(?=\r?\n[ \t]*(?:\d+[\.\s]+[A-Z]|\bIntroduction\b|\bKeywords?\b|\bIndex Terms?\b|\bCategories\b))",
     # "Abstract—" or "Abstract:" inline
     r"(?:^|\n)[ \t]*(?:Abstract|ABSTRACT)[—–:\-]\s*(.*?)(?=\r?\n[ \t]*(?:\d+[\.\s]+[A-Z]|\bIntroduction\b|\bKeywords?\b|\bIndex Terms?\b))",
+    # Fallback: "Abstract" header with no known terminator — grab up to 4000 chars
+    r"(?:^|\n)[ \t]*(?:Abstract|ABSTRACT)[ \t]*\r?\n(.{100,4000})",
 ]
 
 _MIN_ABSTRACT_LEN = 100   # Characters — skip noise matches
@@ -26,9 +28,11 @@ def extract_abstract_text(pdf_path: str) -> str | None:
     The returned string is clean (whitespace normalised) and capped at 4 000 chars.
     """
     doc = fitz.open(pdf_path)
-    pages_to_check = min(6, len(doc))
-    text = "".join(doc[i].get_text() for i in range(pages_to_check))
-    doc.close()
+    try:
+        pages_to_check = min(6, len(doc))
+        text = "".join(doc[i].get_text() for i in range(pages_to_check))
+    finally:
+        doc.close()
 
     for pattern in _ABSTRACT_PATTERNS:
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)

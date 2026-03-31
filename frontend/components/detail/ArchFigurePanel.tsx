@@ -45,8 +45,12 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
   };
 
   const handleDeleteNote = async (annId: string) => {
-    await deleteAnnotation(item.id, annId);
-    setNotes((prev) => prev.filter((n) => n.id !== annId));
+    try {
+      await deleteAnnotation(item.id, annId);
+      setNotes((prev) => prev.filter((n) => n.id !== annId));
+    } catch (e) {
+      console.error("Failed to delete note:", e);
+    }
   };
 
   return (

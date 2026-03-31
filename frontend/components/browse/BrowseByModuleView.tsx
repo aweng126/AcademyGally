@@ -22,6 +22,7 @@ export default function BrowseByModuleView() {
 
   useEffect(() => {
     if (activeTab === "compare") return;
+    setItems([]);
     getContent({ module_type: activeTab as ModuleType }).then(setItems).catch(console.error);
   }, [activeTab]);
 

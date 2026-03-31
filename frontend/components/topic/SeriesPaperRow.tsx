@@ -27,6 +27,7 @@ export default function SeriesPaperRow({ tp, topicId, visibleModules, onProgress
   const [expanded, setExpanded] = useState(false);
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   const allModuleEntries = Object.entries(tp.progress_json) as [string, boolean][];
   const doneCount = allModuleEntries.filter(([, v]) => v).length;
@@ -49,11 +50,13 @@ export default function SeriesPaperRow({ tp, topicId, visibleModules, onProgress
 
   const handleToggle = async (module: string, done: boolean) => {
     const updated = { ...tp.progress_json, [module]: done };
+    setToggleError(null);
     try {
       await updatePaperProgress(topicId, tp.paper_id, updated);
       onProgressUpdate(tp.paper_id, updated);
     } catch (e) {
       console.error(e);
+      setToggleError("Failed to save progress. Please try again.");
     }
   };
 
@@ -107,6 +110,9 @@ export default function SeriesPaperRow({ tp, topicId, visibleModules, onProgress
       {/* Expanded series content */}
       {expanded && (
         <div className="border-t bg-gray-50 px-5 pb-6 pt-4">
+          {toggleError && (
+            <p className="mb-3 text-xs text-red-500">{toggleError}</p>
+          )}
           {loadingItems ? (
             <p className="text-sm text-gray-400">Loading content...</p>
           ) : seriesItems.length === 0 ? (

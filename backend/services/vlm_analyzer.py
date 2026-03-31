@@ -25,6 +25,10 @@ def _get_client() -> anthropic.Anthropic:
     return _client
 
 
+def _get_model() -> str:
+    return os.getenv("VLM_MODEL", "claude-opus-4-6")
+
+
 def load_prompt(module_type: str) -> str:
     return (PROMPTS_DIR / f"{module_type}.txt").read_text()
 
@@ -55,7 +59,7 @@ def analyze_image(image_path: str, module_type: str) -> dict:
     for _ in range(2):
         try:
             response = _get_client().messages.create(
-                model="claude-opus-4-6",
+                model=_get_model(),
                 max_tokens=2048,
                 messages=[
                     {
@@ -94,7 +98,7 @@ def analyze_text(text: str, module_type: str) -> dict:
     for _ in range(2):
         try:
             response = _get_client().messages.create(
-                model="claude-opus-4-6",
+                model=_get_model(),
                 max_tokens=2048,
                 messages=[{"role": "user", "content": user_message}],
             )

@@ -20,6 +20,7 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
   const [paperTitle, setPaperTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     getPaper(params.id)
@@ -44,6 +45,7 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const confirmations = items.map((item) => ({
         item_id: item.id,
@@ -53,6 +55,7 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
       router.push(`/papers/${params.id}`);
     } catch (e) {
       console.error(e);
+      setSubmitError(e instanceof Error ? e.message : "Submission failed. Please try again.");
       setSubmitting(false);
     }
   };
@@ -157,7 +160,13 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Footer */}
-      <div className="mt-8 flex items-center justify-between border-t pt-4">
+      {submitError && (
+        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {submitError}
+        </p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between border-t pt-4">
         <p className="text-sm text-gray-500">
           {toAnalyze > 0 ? (
             <span>

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 import json
 
 
@@ -84,7 +84,7 @@ class AnnotationOut(BaseModel):
 
 class ConfirmItemEntry(BaseModel):
     item_id: str
-    module_type: str  # arch_figure | eval_figure | other
+    module_type: Literal["arch_figure", "eval_figure", "abstract", "algorithm", "other"]
 
 
 class ConfirmItemsRequest(BaseModel):

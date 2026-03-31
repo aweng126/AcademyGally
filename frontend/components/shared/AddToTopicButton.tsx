@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Topic } from "@/lib/types";
-import { getTopics, addPaperToTopic } from "@/lib/api";
+import { getTopics, addPaperToTopic, ApiError } from "@/lib/api";
 
 interface Props {
   paperId: string;
@@ -16,6 +16,7 @@ export default function AddToTopicButton({ paperId, compact = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [addError, setAddError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   // Fetch topics when dropdown opens for the first time
@@ -49,13 +50,18 @@ export default function AddToTopicButton({ paperId, compact = false }: Props) {
   const handleAdd = async (topicId: string) => {
     if (added.has(topicId) || adding) return;
     setAdding(topicId);
+    setAddError(null);
     try {
       // order = large number so new papers go to the end
       await addPaperToTopic(topicId, { paper_id: paperId, order: 999 });
       setAdded((prev) => new Set([...prev, topicId]));
-    } catch {
-      // 409 = already in topic — still mark as added
-      setAdded((prev) => new Set([...prev, topicId]));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Already in topic — mark as added silently
+        setAdded((prev) => new Set([...prev, topicId]));
+      } else {
+        setAddError("Failed to add. Please try again.");
+      }
     } finally {
       setAdding(null);
     }
@@ -80,6 +86,9 @@ export default function AddToTopicButton({ paperId, compact = false }: Props) {
             Topics
           </div>
 
+          {addError && (
+            <p className="border-b px-3 py-2 text-xs text-red-500">{addError}</p>
+          )}
           {loading ? (
             <p className="px-3 py-3 text-xs text-gray-400">Loading...</p>
           ) : topics.length === 0 ? (

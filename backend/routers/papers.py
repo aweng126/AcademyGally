@@ -1,9 +1,12 @@
+import logging
 import os
 import uuid
 import json
 from fastapi import APIRouter, Depends, UploadFile, File, Form, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from database import get_db, SessionLocal
 from models.paper import Paper
@@ -97,12 +100,14 @@ def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
                 )
                 db.add(abstract_ci)
                 abstract_item_id = abstract_id
-        except Exception:
-            pass  # Abstract extraction failure is non-fatal
+        except Exception as e:
+            logger.warning("Abstract extraction failed for paper %s: %s", paper_id, e, exc_info=True)
+            # Non-fatal — continue without abstract
 
         paper.processing_status = "done"
         db.commit()
-    except Exception:
+    except Exception as e:
+        logger.error("Paper processing failed for %s: %s", paper_id, e, exc_info=True)
         db.rollback()
         paper = db.query(Paper).filter(Paper.id == paper_id).first()
         if paper:
@@ -112,7 +117,8 @@ def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
     finally:
         db.close()
 
-    # Trigger abstract VLM analysis outside the DB session (non-fatal)
+    # Trigger abstract VLM analysis after paper is marked done.
+    # FullAnalysisPage polls for processing content_items so the UI stays consistent.
     if abstract_item_id:
         _analyze_item_bg(abstract_item_id)
 
@@ -147,12 +153,13 @@ def _analyze_item_bg(item_id: str) -> None:
         try:
             from services.embedder import embed_analysis
             item.embedding_vector = embed_analysis(result)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Embedding failed for item %s: %s", item_id, e, exc_info=True)
 
         item.processing_status = "done"
         db.commit()
-    except Exception:
+    except Exception as e:
+        logger.error("VLM analysis failed for item %s: %s", item_id, e, exc_info=True)
         db.rollback()
         item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
         if item:

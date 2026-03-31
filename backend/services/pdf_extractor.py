@@ -13,46 +13,48 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str, paper_id: str) -> li
     Saves images to output_dir and returns ExtractedItem list with relative paths.
     """
     os.makedirs(output_dir, exist_ok=True)
-    doc = fitz.open(pdf_path)
     items: list[ExtractedItem] = []
 
-    for page_index in range(len(doc)):
-        page = doc[page_index]
-        page_num = page_index + 1
-        page_text = page.get_text()
-        captions = _extract_captions(page_text)
-        image_list = page.get_images(full=True)
+    doc = fitz.open(pdf_path)
+    try:
+        for page_index in range(len(doc)):
+            page = doc[page_index]
+            page_num = page_index + 1
+            page_text = page.get_text()
+            captions = _extract_captions(page_text)
+            image_list = page.get_images(full=True)
 
-        fig_idx = 0
-        for img_meta in image_list:
-            xref = img_meta[0]
-            base_image = doc.extract_image(xref)
+            fig_idx = 0
+            for img_meta in image_list:
+                xref = img_meta[0]
+                base_image = doc.extract_image(xref)
 
-            w, h = base_image.get("width", 0), base_image.get("height", 0)
-            if w < MIN_IMAGE_PX or h < MIN_IMAGE_PX:
-                continue
+                w, h = base_image.get("width", 0), base_image.get("height", 0)
+                if w < MIN_IMAGE_PX or h < MIN_IMAGE_PX:
+                    continue
 
-            ext = base_image.get("ext", "png")
-            if ext not in ("png", "jpeg", "jpg", "bmp"):
-                ext = "png"
+                ext = base_image.get("ext", "png")
+                if ext not in ("png", "jpeg", "jpg", "bmp"):
+                    ext = "png"
 
-            filename = f"p{page_num}_{fig_idx}.{ext}"
-            abs_path = os.path.join(output_dir, filename)
-            with open(abs_path, "wb") as f:
-                f.write(base_image["image"])
+                filename = f"p{page_num}_{fig_idx}.{ext}"
+                abs_path = os.path.join(output_dir, filename)
+                with open(abs_path, "wb") as f:
+                    f.write(base_image["image"])
 
-            caption = captions[fig_idx] if fig_idx < len(captions) else None
+                caption = captions[fig_idx] if fig_idx < len(captions) else None
 
-            items.append(
-                ExtractedItem(
-                    image_path=f"{paper_id}/{filename}",
-                    page_number=page_num,
-                    caption=caption,
+                items.append(
+                    ExtractedItem(
+                        image_path=f"{paper_id}/{filename}",
+                        page_number=page_num,
+                        caption=caption,
+                    )
                 )
-            )
-            fig_idx += 1
+                fig_idx += 1
+    finally:
+        doc.close()
 
-    doc.close()
     return items
 
 
