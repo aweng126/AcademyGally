@@ -12,7 +12,7 @@ services:
       - fastembed-cache:/root/.cache/fastembed
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -32,6 +32,24 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+  ready:
+    image: alpine
+    depends_on:
+      frontend:
+        condition: service_started
+    restart: "no"
+    command: >
+      sh -c "
+        echo '';
+        echo '==========================================';
+        echo '   AcademyGally is ready!';
+        echo '==========================================';
+        echo '  App:      http://localhost:3000';
+        echo '  API docs: http://localhost:8000/docs';
+        echo '==========================================';
+        echo ''
+      "
 
 volumes:
   fastembed-cache:
