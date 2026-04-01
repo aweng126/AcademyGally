@@ -103,6 +103,97 @@ def list_content(
     return [_item_out(i) for i in query.order_by(ContentItem.created_at.desc()).all()]
 
 
+@router.get("/phrases")
+def list_phrases(
+    function: Optional[str] = Query(None),
+    venue: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Aggregate key_phrases from all done abstract ContentItems.
+    Returns flat list of phrase objects enriched with paper metadata.
+    key_phrases are stored inside ContentItem.analysis_json (added by updated abstract.txt prompt).
+    """
+    from models.paper import Paper as PaperModel
+
+    query = (
+        db.query(ContentItem, PaperModel)
+        .join(PaperModel, ContentItem.paper_id == PaperModel.id)
+        .filter(
+            ContentItem.module_type == "abstract",
+            ContentItem.processing_status == "done",
+            ContentItem.analysis_json.isnot(None),
+        )
+    )
+    if venue:
+        query = query.filter(PaperModel.venue.ilike(f"%{venue}%"))
+
+    results = []
+    for item, paper in query.all():
+        try:
+            data = json.loads(item.analysis_json)
+            phrases = data.get("key_phrases", [])
+        except Exception:
+            continue
+        for phrase in phrases:
+            fn = phrase.get("function", "other")
+            if function and fn != function:
+                continue
+            results.append({
+                "item_id": item.id,
+                "paper_id": paper.id,
+                "paper_title": paper.title,
+                "venue": paper.venue,
+                "year": paper.year,
+                "text": phrase.get("text", ""),
+                "function": fn,
+                "why_effective": phrase.get("why_effective", ""),
+            })
+
+    return results
+
+
+@router.get("/phrases/favorites")
+def list_phrase_favorites(db: Session = Depends(get_db)):
+    """
+    Return all phrase annotations (UserAnnotations with tag 'phrase_favorite'),
+    enriched with paper metadata. Uses the existing UserAnnotation model.
+    """
+    from models.paper import Paper as PaperModel
+
+    anns = (
+        db.query(UserAnnotation)
+        .filter(UserAnnotation.tags.contains("phrase_favorite"))
+        .all()
+    )
+    results = []
+    for ann in anns:
+        item = db.query(ContentItem).filter(ContentItem.id == ann.item_id).first()
+        paper = (
+            db.query(PaperModel).filter(PaperModel.id == item.paper_id).first()
+            if item
+            else None
+        )
+        tags_list = []
+        if isinstance(ann.tags, str):
+            try:
+                tags_list = json.loads(ann.tags)
+            except Exception:
+                tags_list = []
+        else:
+            tags_list = ann.tags or []
+
+        results.append({
+            "annotation_id": ann.id,
+            "item_id": ann.item_id,
+            "paper_id": item.paper_id if item else None,
+            "paper_title": paper.title if paper else "Unknown",
+            "text": ann.note_text,
+            "tags": tags_list,
+        })
+    return results
+
+
 @router.get("/{item_id}")
 def get_content_item(item_id: str, db: Session = Depends(get_db)):
     item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
