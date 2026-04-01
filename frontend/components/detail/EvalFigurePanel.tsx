@@ -15,44 +15,67 @@ export default function EvalFigurePanel({ item }: { item: ContentItem }) {
         />
       )}
       {a ? (
-        <div className="flex flex-1 flex-col gap-3 text-sm">
-          <p>
-            <span className="font-medium">Headline: </span>
-            <span className="text-gray-700">{a.headline_result}</span>
-          </p>
-          <p>
-            <span className="font-medium">Workload: </span>
-            <span className="text-gray-700">{a.workload_desc}</span>
-          </p>
-          <div className="flex flex-wrap gap-1">
-            <span className="font-medium">Metrics:</span>
-            {a.metrics.map((m) => (
-              <span key={m} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">
-                {m}
-              </span>
-            ))}
+        <div className="flex flex-1 flex-col gap-4 text-sm">
+          {/* Headline result — green hero card */}
+          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-base font-semibold text-green-900">
+            {a.headline_result}
           </div>
-          <div className="flex flex-wrap gap-1">
-            <span className="font-medium">Baselines:</span>
-            {a.baselines.map((b) => (
-              <span key={b} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">
-                {b}
-              </span>
-            ))}
-          </div>
+
+          {/* Workload */}
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Workload</p>
+            <p className="text-gray-700 text-sm">{a.workload_desc}</p>
+          </section>
+
+          {/* Metrics — label above chips */}
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Metrics</p>
+            <div className="flex flex-wrap gap-1.5">
+              {a.metrics.map((m) => (
+                <span key={m} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                  {m}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* Baselines — label above chips */}
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Baselines</p>
+            <div className="flex flex-wrap gap-1.5">
+              {a.baselines.map((b) => (
+                <span key={b} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                  {b}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* Caveats — amber warning cards */}
           {a.caveats.length > 0 && (
             <section>
-              <p className="font-medium text-gray-800">Caveats</p>
-              <ul className="mt-1 list-disc pl-4 text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Caveats</p>
+              <div className="flex flex-col gap-1.5">
                 {a.caveats.map((c, i) => (
-                  <li key={i}>{c}</li>
+                  <div
+                    key={i}
+                    className="border-l-2 border-amber-400 bg-amber-50 px-3 py-2 rounded text-sm text-amber-900"
+                  >
+                    {c}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-400">Analysis pending.</p>
+        <p className="text-sm text-gray-400">
+          {!a && item.processing_status === "failed" ? (
+            <span className="text-red-500">Analysis failed — please retry or check the figure.</span>
+          ) : (
+            "Analysis pending."
+          )}
+        </p>
       )}
     </div>
   );

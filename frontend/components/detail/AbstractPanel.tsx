@@ -18,37 +18,48 @@ export default function AbstractPanel({ item }: { item: ContentItem }) {
       {/* Structured AI analysis */}
       {a ? (
         <>
-          <section>
-            <h3 className="font-semibold text-gray-800">Problem statement</h3>
-            <p className="mt-1 text-gray-600">{a.problem_statement}</p>
-          </section>
+          {/* Problem statement — blue hero card */}
+          <div className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 shadow-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-1">Problem statement</h3>
+            <p className="text-blue-900 text-sm leading-relaxed">{a.problem_statement}</p>
+          </div>
 
-          <section>
-            <h3 className="font-semibold text-gray-800">Proposed approach</h3>
-            <p className="mt-1 text-gray-600">{a.proposed_approach}</p>
-          </section>
+          {/* Proposed approach — green hero card */}
+          <div className="border-l-4 border-green-400 bg-green-50 rounded-r-lg px-4 py-3 shadow-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-1">Proposed approach</h3>
+            <p className="text-green-900 text-sm leading-relaxed">{a.proposed_approach}</p>
+          </div>
 
+          {/* Key contributions — numbered cards */}
           <section>
-            <h3 className="font-semibold text-gray-800">Key contributions</h3>
-            <ul className="mt-1 list-disc pl-4 text-gray-600">
+            <h3 className="font-semibold text-gray-800 mb-2">Key contributions</h3>
+            <ol className="flex flex-col gap-2">
               {a.key_contributions.map((c, i) => (
-                <li key={i}>{c}</li>
+                <li key={i} className="flex gap-3 bg-gray-50 rounded px-3 py-2">
+                  <span className="flex-shrink-0 font-semibold text-gray-400 text-xs mt-0.5">{i + 1}.</span>
+                  <span className="text-gray-700 text-sm leading-relaxed">{c}</span>
+                </li>
               ))}
-            </ul>
+            </ol>
           </section>
 
+          {/* Evaluation summary — subtle background */}
           <section>
-            <h3 className="font-semibold text-gray-800">Evaluation summary</h3>
-            <p className="mt-1 text-gray-600">{a.evaluation_summary}</p>
+            <h3 className="font-semibold text-gray-800 mb-1">Evaluation summary</h3>
+            <div className="bg-gray-50 rounded px-3 py-2">
+              <p className="text-gray-600 text-sm leading-relaxed">{a.evaluation_summary}</p>
+            </div>
           </section>
 
+          {/* Novelty claim — highlight treatment */}
           {a.novelty_claim && (
-            <section>
-              <h3 className="font-semibold text-gray-800">Novelty claim</h3>
-              <p className="mt-1 text-gray-600">{a.novelty_claim}</p>
-            </section>
+            <div className="bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-yellow-600 mb-1">Novelty claim</p>
+              <p className="text-yellow-900 text-sm leading-relaxed">{a.novelty_claim}</p>
+            </div>
           )}
 
+          {/* Keywords */}
           {a.keywords?.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {a.keywords.map((k) => (
@@ -65,6 +76,8 @@ export default function AbstractPanel({ item }: { item: ContentItem }) {
             ? "AI analysis in progress..."
             : item.processing_status === "pending"
             ? "Queued for analysis."
+            : item.processing_status === "failed"
+            ? <span className="text-red-500">Analysis failed — please retry or check the PDF.</span>
             : item.caption
             ? "Analysis failed — raw text shown above."
             : "No abstract found in this PDF."}

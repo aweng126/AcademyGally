@@ -74,46 +74,92 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
 
         {a ? (
           <div className="flex flex-1 flex-col gap-4 text-sm">
+            {/* Core problem — blue hero card */}
+            <div className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 shadow-sm">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-1">Core problem</h3>
+              <p className="text-blue-900 text-sm leading-relaxed">{a.core_problem}</p>
+            </div>
+
+            {/* Design insight — purple hero card */}
+            <div className="border-l-4 border-purple-400 bg-purple-50 rounded-r-lg px-4 py-3 shadow-sm">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-purple-500 mb-1">Design insight</h3>
+              <p className="text-purple-900 text-sm leading-relaxed">{a.design_insight}</p>
+            </div>
+
+            {/* Components — pill/card chips */}
             <section>
-              <h3 className="font-semibold text-gray-800">Core problem</h3>
-              <p className="mt-1 text-gray-600">{a.core_problem}</p>
-            </section>
-            <section>
-              <h3 className="font-semibold text-gray-800">Design insight</h3>
-              <p className="mt-1 text-gray-600">{a.design_insight}</p>
-            </section>
-            <section>
-              <h3 className="font-semibold text-gray-800">Components</h3>
-              <ul className="mt-1 space-y-1">
+              <h3 className="font-semibold text-gray-800 mb-2">Components</h3>
+              <div className="flex flex-wrap gap-2">
                 {a.components.map((c) => (
-                  <li key={c.name} className="text-gray-600">
-                    <span className="font-medium text-gray-800">{c.name}</span> — {c.role}
-                  </li>
+                  <div
+                    key={c.name}
+                    className="bg-gray-100 rounded-lg px-3 py-1.5 text-xs"
+                    title={c.role}
+                  >
+                    <span className="font-bold text-gray-800">{c.name}</span>
+                    <span className="block text-gray-500 mt-0.5 max-w-[180px] truncate">{c.role}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
+
+            {/* Dataflow — horizontal flow if ≤4, vertical otherwise */}
             <section>
-              <h3 className="font-semibold text-gray-800">Dataflow</h3>
-              <ol className="mt-1 list-decimal pl-4 text-gray-600">
-                {a.dataflow.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
+              <h3 className="font-semibold text-gray-800 mb-2">Dataflow</h3>
+              {a.dataflow.length <= 4 ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  {a.dataflow.map((step, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 whitespace-nowrap">
+                        <span className="font-semibold text-gray-500 mr-1">{i + 1}.</span>
+                        {step}
+                      </span>
+                      {i < a.dataflow.length - 1 && (
+                        <span className="text-gray-400 font-bold text-sm">→</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ol className="flex flex-col gap-1">
+                  {a.dataflow.map((step, i) => (
+                    <li key={i} className="flex items-start gap-2 text-gray-700">
+                      <span className="flex-shrink-0 text-gray-400 font-semibold text-xs mt-0.5">{i + 1}.</span>
+                      <span className="text-xs leading-relaxed">{step}</span>
+                      {i < a.dataflow.length - 1 && (
+                        <span className="block text-gray-300 text-xs ml-4">↓</span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              )}
             </section>
+
+            {/* Tradeoffs — amber warning cards */}
             <section>
-              <h3 className="font-semibold text-gray-800">Tradeoffs</h3>
-              <ul className="mt-1 list-disc pl-4 text-gray-600">
+              <h3 className="font-semibold text-gray-800 mb-2">Tradeoffs</h3>
+              <div className="flex flex-col gap-1.5">
                 {a.tradeoffs.map((t, i) => (
-                  <li key={i}>{t}</li>
+                  <div
+                    key={i}
+                    className="border-l-2 border-amber-400 bg-amber-50 px-3 py-2 rounded text-sm text-amber-900"
+                  >
+                    {t}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
+
+            {/* Related systems — prominent blue chips */}
             {a.related_systems.length > 0 && (
               <section>
-                <h3 className="font-semibold text-gray-800">Related systems</h3>
-                <div className="mt-1 flex flex-wrap gap-1">
+                <h3 className="font-semibold text-gray-800 mb-2">Related systems</h3>
+                <div className="flex flex-wrap gap-1.5">
                   {a.related_systems.map((s) => (
-                    <span key={s} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                    <span
+                      key={s}
+                      className="rounded-full bg-blue-50 border border-blue-200 px-3 py-0.5 text-xs font-medium text-blue-700"
+                    >
                       {s}
                     </span>
                   ))}
@@ -157,12 +203,17 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
         <div className="pt-4">
           {activeTab === "analysis" && a && (
             <div className="text-sm text-gray-600">
-              <p className="font-medium text-gray-800">Tradeoffs recap</p>
-              <ul className="mt-1 list-disc pl-4">
+              <p className="font-medium text-gray-800 mb-2">Tradeoffs recap</p>
+              <div className="flex flex-col gap-1.5">
                 {a.tradeoffs.map((t, i) => (
-                  <li key={i}>{t}</li>
+                  <div
+                    key={i}
+                    className="border-l-2 border-amber-400 bg-amber-50 px-3 py-2 rounded text-sm text-amber-900"
+                  >
+                    {t}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
