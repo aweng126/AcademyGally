@@ -3,10 +3,51 @@ Output ONLY valid JSON matching the schema below. No markdown, no preamble, no e
 
 Schema:
 {
-  "problem_statement": "string",
-  "proposed_approach": "string",
+  "problem_statement": "string — one sentence describing the core problem",
+  "proposed_approach": "string — one sentence describing the method/system",
   "key_contributions": ["string"],
-  "evaluation_summary": "string",
+  "evaluation_summary": "string — how the claims are evaluated and what the headline result is",
   "keywords": ["string"],
-  "novelty_claim": "string"
+  "novelty_claim": "string — the single strongest novelty assertion in the abstract",
+  "rubric": {
+    "problem_clarity": {
+      "score": 1,
+      "rationale": "string — one sentence justifying this score"
+    },
+    "contribution_specificity": {
+      "score": 1,
+      "rationale": "string"
+    },
+    "novelty_claim_strength": {
+      "score": 1,
+      "rationale": "string"
+    },
+    "evaluation_evidence_quality": {
+      "score": 1,
+      "rationale": "string"
+    },
+    "writing_quality": {
+      "score": 1,
+      "rationale": "string — assess conciseness and precision"
+    }
+  },
+  "key_phrases": [
+    {
+      "text": "exact phrase or sentence fragment from the abstract",
+      "function": "problem_setup",
+      "why_effective": "string — one sentence explaining what makes this phrase work well as a writing pattern"
+    }
+  ]
 }
+
+Scoring guidance for rubric (replace score placeholder 1 with actual score):
+- 5: Exemplary — immediately clear, specific, and evidenced
+- 4: Strong — clear with minor room for improvement
+- 3: Adequate — present but vague or overly broad
+- 2: Weak — present but hard to find or poorly expressed
+- 1: Missing or severely unclear
+
+For key_phrases: extract 3–6 phrases that PhD students could learn from as reusable writing patterns.
+Prefer phrases that are reusable patterns, not domain-specific facts.
+Each phrase should be a verbatim or near-verbatim quote from the abstract.
+Valid values for "function": "problem_setup" | "contribution_claim" | "evaluation_framing" | "positioning" | "methodology" | "limitation"

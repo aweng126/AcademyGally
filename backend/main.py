@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from database import Base
-from routers import papers, content, topics
+from routers import papers, content, topics, writing_coach
 from services.arch_figure_extractor import ArchFigureExtractor
 from services.abstract_extractor import AbstractExtractor
 from services.eval_figure_extractor import EvalFigureExtractor
@@ -43,6 +43,7 @@ app.mount("/figures", StaticFiles(directory=figures_dir), name="figures")
 app.include_router(papers.router, prefix="/papers", tags=["papers"])
 app.include_router(content.router, prefix="/content", tags=["content"])
 app.include_router(topics.router, prefix="/topics", tags=["topics"])
+app.include_router(writing_coach.router, prefix="/writing-coach", tags=["writing_coach"])
 
 
 @app.get("/health")
