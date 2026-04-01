@@ -98,7 +98,11 @@ export default function LibraryView() {
 
       <div className="flex flex-col gap-3">
         {papers.map((p) => (
-          <PaperCard key={p.id} paper={p} />
+          <PaperCard
+            key={p.id}
+            paper={p}
+            onDelete={(id) => setPapers((prev) => prev.filter((x) => x.id !== id))}
+          />
         ))}
         {!loading && papers.length === 0 && (
           <p className="text-sm text-gray-400">

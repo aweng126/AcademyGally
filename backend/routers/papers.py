@@ -358,8 +358,40 @@ def confirm_items(
 
 @router.delete("/{paper_id}", status_code=204)
 def delete_paper(paper_id: str, db: Session = Depends(get_db)):
+    import shutil
+    from models.annotation import UserAnnotation
+    from models.topic import TopicPaper
+
     paper = db.get(Paper, paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
+
+    # 1. Delete annotations for all content items belonging to this paper
+    item_ids = [i.id for i in db.query(ContentItem).filter(ContentItem.paper_id == paper_id).all()]
+    if item_ids:
+        db.query(UserAnnotation).filter(UserAnnotation.item_id.in_(item_ids)).delete(synchronize_session=False)
+
+    # 2. Delete content items
+    db.query(ContentItem).filter(ContentItem.paper_id == paper_id).delete(synchronize_session=False)
+
+    # 3. Delete topic associations
+    db.query(TopicPaper).filter(TopicPaper.paper_id == paper_id).delete(synchronize_session=False)
+
+    # 4. Delete the paper record
     db.delete(paper)
     db.commit()
+
+    # 5. Clean up physical files (non-fatal if already missing)
+    pdf_path = paper.pdf_path
+    if pdf_path and os.path.isfile(pdf_path):
+        try:
+            os.remove(pdf_path)
+        except OSError as e:
+            logger.warning("Could not delete PDF file %s: %s", pdf_path, e)
+
+    figures_dir = os.path.join(FIGURES_DIR, paper_id)
+    if os.path.isdir(figures_dir):
+        try:
+            shutil.rmtree(figures_dir)
+        except OSError as e:
+            logger.warning("Could not delete figures dir %s: %s", figures_dir, e)
