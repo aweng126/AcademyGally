@@ -290,9 +290,39 @@ async def import_arxiv(
     return paper
 
 
+@router.get("/venues")
+def list_venues(db: Session = Depends(get_db)):
+    """
+    Return all distinct (venue, year) combinations with paper counts.
+    Only includes papers with a non-null, non-empty venue.
+    """
+    from sqlalchemy import func
+
+    rows = (
+        db.query(Paper.venue, Paper.year, func.count(Paper.id).label("count"))
+        .filter(Paper.venue != None, Paper.venue != "")
+        .group_by(Paper.venue, Paper.year)
+        .order_by(Paper.venue, Paper.year.desc())
+        .all()
+    )
+
+    # Aggregate: per-venue total, then per-venue-year breakdown
+    venues: dict[str, dict] = {}
+    for venue, year, count in rows:
+        if venue not in venues:
+            venues[venue] = {"venue": venue, "total": 0, "years": []}
+        venues[venue]["total"] += count
+        if year is not None:
+            venues[venue]["years"].append({"year": year, "count": count})
+
+    # Sort years descending within each venue
+    result = sorted(venues.values(), key=lambda v: -v["total"])
+    return result
+
+
 @router.get("")
-def list_papers(q: Optional[str] = None, venue: Optional[str] = None, db: Session = Depends(get_db)):
-    """List all papers with their ContentItems. Optionally filter by title/author (q) or venue."""
+def list_papers(q: Optional[str] = None, venue: Optional[str] = None, year: Optional[int] = None, db: Session = Depends(get_db)):
+    """List all papers with their ContentItems. Optionally filter by title/author (q), venue, or year."""
     query = db.query(Paper)
     if q:
         like = f"%{q}%"
@@ -301,6 +331,8 @@ def list_papers(q: Optional[str] = None, venue: Optional[str] = None, db: Sessio
         )
     if venue:
         query = query.filter(Paper.venue.ilike(f"%{venue}%"))
+    if year:
+        query = query.filter(Paper.year == year)
     papers = query.order_by(Paper.uploaded_at.desc()).all()
 
     result = []

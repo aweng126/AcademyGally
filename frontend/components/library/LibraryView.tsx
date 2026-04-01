@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Paper } from "@/lib/types";
 import { getPapers, uploadPaper, importFromArxiv } from "@/lib/api";
 import PaperCard from "./PaperCard";
+import VenueFilter from "./VenueFilter";
 
 export default function LibraryView() {
   const searchParams = useSearchParams();
@@ -14,6 +15,8 @@ export default function LibraryView() {
 
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -23,12 +26,15 @@ export default function LibraryView() {
 
   const loadPapers = useCallback(() => {
     setLoading(true);
-    const params = q ? { q } : undefined;
-    getPapers(params)
+    const params: { q?: string; venue?: string; year?: number } = {};
+    if (q) params.q = q;
+    if (selectedVenue) params.venue = selectedVenue;
+    if (selectedYear) params.year = selectedYear;
+    getPapers(Object.keys(params).length ? params : undefined)
       .then(setPapers)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [q]);
+  }, [q, selectedVenue, selectedYear]);
 
   useEffect(() => {
     loadPapers();
@@ -130,6 +136,16 @@ export default function LibraryView() {
           </div>
         </div>
       )}
+
+      {/* Venue filter */}
+      <VenueFilter
+        selectedVenue={selectedVenue}
+        selectedYear={selectedYear}
+        onSelect={(venue, year) => {
+          setSelectedVenue(venue);
+          setSelectedYear(year);
+        }}
+      />
 
       {/* Papers list */}
       {loading && papers.length === 0 && (

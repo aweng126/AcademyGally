@@ -1,4 +1,4 @@
-import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse } from "./types";
+import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -25,8 +25,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ---------- Papers ----------
 
-export const getPapers = (params?: { q?: string; venue?: string }) => {
-  const qs = params ? new URLSearchParams(params as Record<string, string>).toString() : "";
+export const getPapers = (params?: { q?: string; venue?: string; year?: number }) => {
+  const qs = params
+    ? new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+        )
+      ).toString()
+    : "";
   return request<Paper[]>(`/papers${qs ? `?${qs}` : ""}`);
 };
 
@@ -143,3 +149,5 @@ export const importFromArxiv = (url: string) =>
     method: "POST",
     body: JSON.stringify({ url }),
   });
+
+export const getVenues = () => request<VenueEntry[]>("/papers/venues");

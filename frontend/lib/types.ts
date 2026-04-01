@@ -110,3 +110,14 @@ export interface PaperMetadataResponse {
   vlm_result?: VlmMetadataResult;
   scholar_suggestion?: ScholarSuggestion;
 }
+
+export interface VenueYear {
+  year: number;
+  count: number;
+}
+
+export interface VenueEntry {
+  venue: string;
+  total: number;
+  years: VenueYear[];
+}
