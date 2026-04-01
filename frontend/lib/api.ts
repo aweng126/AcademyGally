@@ -1,4 +1,4 @@
-import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry } from "./types";
+import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry, CoachResponse, PhraseItem, PhraseFavorite } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -151,3 +151,31 @@ export const importFromArxiv = (url: string) =>
   });
 
 export const getVenues = () => request<VenueEntry[]>("/papers/venues");
+
+// ─── Writing Coach ──────────────────────────────────────────────────────────
+
+export const getWritingFeedback = (body: {
+  draft_text: string;
+  mode: "abstract" | "intro_paragraph" | "related_work_paragraph";
+  exemplar_item_ids?: string[];
+}) =>
+  request<CoachResponse>("/writing-coach/feedback", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+// ─── Phrase Library ─────────────────────────────────────────────────────────
+
+export const getPhrases = (params?: { function?: string; venue?: string }) => {
+  const qs = params
+    ? new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).filter(([, v]) => v != null) as [string, string][]
+        )
+      ).toString()
+    : "";
+  return request<PhraseItem[]>(`/content/phrases${qs ? `?${qs}` : ""}`);
+};
+
+export const getPhraseFavorites = () =>
+  request<PhraseFavorite[]>("/content/phrases/favorites");

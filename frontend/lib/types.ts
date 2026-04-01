@@ -43,6 +43,8 @@ export interface AbstractAnalysis {
   evaluation_summary: string;
   keywords: string[];
   novelty_claim: string;
+  rubric?: AbstractRubric;       // added by updated prompt
+  key_phrases?: KeyPhrase[];     // added by updated prompt
 }
 
 export interface EvalFigureAnalysis {
@@ -120,4 +122,81 @@ export interface VenueEntry {
   venue: string;
   total: number;
   years: VenueYear[];
+}
+
+// ─── Abstract Rubric (Feature 1) ───────────────────────────────────────────
+
+export interface RubricDimension {
+  score: number;      // 1–5
+  rationale: string;
+}
+
+export interface AbstractRubric {
+  problem_clarity: RubricDimension;
+  contribution_specificity: RubricDimension;
+  novelty_claim_strength: RubricDimension;
+  evaluation_evidence_quality: RubricDimension;
+  writing_quality: RubricDimension;
+}
+
+export type PhraseFunction =
+  | "problem_setup"
+  | "contribution_claim"
+  | "evaluation_framing"
+  | "positioning"
+  | "methodology"
+  | "limitation";
+
+export interface KeyPhrase {
+  text: string;
+  function: PhraseFunction;
+  why_effective: string;
+}
+
+// ─── Writing Coach (Feature 2) ─────────────────────────────────────────────
+
+export interface CoachIssue {
+  dimension: string;
+  severity: "critical" | "moderate" | "minor";
+  description: string;
+  suggestion: string;
+  exemplar_ref: number | null;
+}
+
+export interface CoachExemplarUsed {
+  item_id: string;
+  paper_title: string;
+  snippet: string;
+}
+
+export interface CoachResponse {
+  overall_score: number;
+  summary: string;
+  strengths: string[];
+  issues: CoachIssue[];
+  suggested_rewrite: string;
+  positioning_notes: string | null;
+  exemplars_used: CoachExemplarUsed[];
+}
+
+// ─── Phrase Pattern Library (Feature 3) ────────────────────────────────────
+
+export interface PhraseItem {
+  item_id: string;
+  paper_id: string;
+  paper_title: string;
+  venue: string | null;
+  year: number | null;
+  text: string;
+  function: PhraseFunction;
+  why_effective: string;
+}
+
+export interface PhraseFavorite {
+  annotation_id: string;
+  item_id: string;
+  paper_id: string | null;
+  paper_title: string;
+  text: string;
+  tags: string[];
 }
