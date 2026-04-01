@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 from database import get_db, SessionLocal
 from models.paper import Paper
 from models.content_item import ContentItem
-from schemas import ConfirmItemsRequest
+from services.metadata_extractor import extract_metadata
+from schemas import (
+    PaperOut, ConfirmItemsRequest,
+    PaperMetadataResponse, VlmMetadataResult, ScholarSuggestion, MetadataConfirm,
+)
 from services.pdf_extractor import extract_images_from_pdf
 from services.vlm_analyzer import analyze_image
 
@@ -50,6 +54,31 @@ def _paper_out(paper: Paper, items: list[ContentItem]) -> dict:
 # ---------------------------------------------------------------------------
 # Background tasks
 # ---------------------------------------------------------------------------
+
+def _extract_metadata_bg(paper_id: str, pdf_path: str) -> None:
+    """Background task: extract metadata via VLM + Scholar, store in paper record."""
+    db = SessionLocal()
+    try:
+        paper = db.get(Paper, paper_id)
+        if not paper:
+            return
+        result = extract_metadata(paper_id, pdf_path)
+        paper.raw_extracted_metadata = json.dumps(result.get("vlm_result") or {})
+        paper.scholar_metadata = json.dumps(result.get("scholar_suggestion") or {})
+        db.commit()
+    except Exception as e:
+        logger.warning("Metadata extraction BG task failed for %s: %s", paper_id, e, exc_info=True)
+        db2 = SessionLocal()
+        try:
+            paper2 = db2.get(Paper, paper_id)
+            if paper2:
+                paper2.raw_extracted_metadata = json.dumps({})
+                db2.commit()
+        finally:
+            db2.close()
+    finally:
+        db.close()
+
 
 def _process_paper_bg(paper_id: str, pdf_path: str) -> None:
     """
@@ -173,42 +202,41 @@ def _analyze_item_bg(item_id: str) -> None:
 # Routes
 # ---------------------------------------------------------------------------
 
-@router.post("")
+@router.post("", response_model=PaperOut)
 async def upload_paper(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    title: str = Form(...),
-    venue: str = Form(None),
-    year: int = Form(None),
-    authors: str = Form(None),
-    doi: str = Form(None),
+    title: str = Form(default=""),
+    venue: str = Form(default=""),
+    year: int = Form(default=None),
+    authors: str = Form(default=""),
     db: Session = Depends(get_db),
 ):
-    """Upload a PDF and trigger background image extraction."""
-    os.makedirs(PDFS_DIR, exist_ok=True)
+    pdfs_dir = os.getenv("PDFS_DIR", "./data/pdfs")
+    os.makedirs(pdfs_dir, exist_ok=True)
     paper_id = str(uuid.uuid4())
-    pdf_path = os.path.join(PDFS_DIR, f"{paper_id}.pdf")
+    pdf_filename = f"{paper_id}.pdf"
+    pdf_path = os.path.join(pdfs_dir, pdf_filename)
 
-    content = await file.read()
     with open(pdf_path, "wb") as f:
+        content = await file.read()
         f.write(content)
 
     paper = Paper(
         id=paper_id,
-        title=title,
-        venue=venue,
+        title=title or "",
+        venue=venue or None,
         year=year,
-        authors=authors,
-        doi=doi,
+        authors=authors or None,
         pdf_path=pdf_path,
-        processing_status="pending",
+        processing_status="awaiting_metadata",
     )
     db.add(paper)
     db.commit()
     db.refresh(paper)
 
-    background_tasks.add_task(_process_paper_bg, paper_id, pdf_path)
-    return _paper_out(paper, [])
+    background_tasks.add_task(_extract_metadata_bg, paper.id, pdf_path)
+    return paper
 
 
 @router.get("")
@@ -239,6 +267,51 @@ def get_paper(paper_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Paper not found")
     items = db.query(ContentItem).filter(ContentItem.paper_id == paper_id).all()
     return _paper_out(paper, items)
+
+
+@router.get("/{paper_id}/metadata", response_model=PaperMetadataResponse)
+def get_paper_metadata(paper_id: str, db: Session = Depends(get_db)):
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    if paper.raw_extracted_metadata is None:
+        return PaperMetadataResponse(id=paper_id, status="extracting")
+
+    vlm_data = json.loads(paper.raw_extracted_metadata) if paper.raw_extracted_metadata else {}
+    scholar_data = json.loads(paper.scholar_metadata) if paper.scholar_metadata else {}
+
+    return PaperMetadataResponse(
+        id=paper_id,
+        status="ready",
+        vlm_result=VlmMetadataResult(**vlm_data) if vlm_data else None,
+        scholar_suggestion=ScholarSuggestion(**scholar_data) if scholar_data else None,
+    )
+
+
+@router.post("/{paper_id}/metadata", response_model=PaperOut)
+def confirm_paper_metadata(
+    paper_id: str,
+    body: MetadataConfirm,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    paper.title = body.title
+    paper.authors = body.authors
+    paper.year = body.year
+    paper.venue = body.venue
+    paper.institution = body.institution
+    paper.doi = body.doi
+    paper.processing_status = "pending"
+    db.commit()
+    db.refresh(paper)
+
+    background_tasks.add_task(_process_paper_bg, paper.id, paper.pdf_path)
+    return paper
 
 
 @router.get("/{paper_id}/full")
@@ -281,3 +354,12 @@ def confirm_items(
         background_tasks.add_task(_analyze_item_bg, item_id)
 
     return {"status": "ok", "analyzing": len(to_analyze)}
+
+
+@router.delete("/{paper_id}", status_code=204)
+def delete_paper(paper_id: str, db: Session = Depends(get_db)):
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    db.delete(paper)
+    db.commit()
