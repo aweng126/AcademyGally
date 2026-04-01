@@ -13,15 +13,18 @@ SIGNIFICANT_GAP_PTS = 20    # pts — vertical whitespace gap that signals "figu
 COL_MARGIN_PTS = 15         # pts — extra horizontal margin when clipping a single column
 
 # Content validation thresholds
-MIN_DRAWING_AREA_SQ_PTS = 400  # sq pts — ignore tiny decorative strokes/lines
-MAX_TEXT_COVERAGE = 0.55       # if text blocks cover > 55 % of crop → discard as body text
+# Drawing paths: count paths intersecting the crop; >= this many → real figure.
+# Counting paths is more reliable than area for scatter plots, line charts etc.
+# where each element is a tiny path.
+MIN_DRAWING_COUNT = 5
+MAX_TEXT_COVERAGE = 0.70       # if text blocks cover > 70 % of crop → discard as body text
 
-# Caption anchor pattern:
-#   • re.match anchors to the START of the block text (avoids "see Figure 1" in body)
-#   • The trailing character class ensures the digit is followed by a delimiter,
-#     not more digits (e.g. "Figure 10" won't match "Figure 1" prematurely).
+# Caption anchor pattern (re.match anchors to block start):
+#   • Matches "Figure N" / "Fig. N" / "Fig N" at the START of the block text
+#   • No trailing delimiter required — handles blocks whose text is exactly
+#     "Figure 1" with no following characters
 _CAPTION_RE = re.compile(
-    r'\s*(?:Figure|Fig\.?)\s*\d+(?:\.\d+)?\s*[\s.:,)\-–]',
+    r'\s*(?:Figure|Fig\.?)\s*\d+(?:\.\d+)?',
     re.IGNORECASE,
 )
 
@@ -47,26 +50,34 @@ def _has_figure_content(
     Return True if the clip region is likely a real figure (not plain body text).
 
     Three-stage check (in descending confidence):
-    1. Vector drawings — any path with intersection area >= MIN_DRAWING_AREA_SQ_PTS.
-       Academic line charts, box diagrams, scatter plots etc. are all vector paths.
-    2. Raster image blocks — an embedded bitmap image overlapping the region.
-    3. Text-coverage ratio — if same-column text blocks cover <= MAX_TEXT_COVERAGE
-       of the crop area we assume it is a figure with annotations, not prose.
+    1. Vector drawing count — count distinct drawing paths that intersect the
+       crop region.  Academic charts/diagrams have many paths (lines, markers,
+       boxes, arrows); plain text areas have 0–2 (at most a column border).
+       Threshold: MIN_DRAWING_COUNT paths.
+    2. Raster image blocks (block_type == 1) overlapping the region.
+    3. Text-coverage ratio — same-column text blocks cover <= MAX_TEXT_COVERAGE
+       of the crop area.  70 % is intentionally lenient: architecture diagrams
+       with many component labels can have high text density while still being
+       real figures.
     """
-    # 1. Vector drawings (fastest rejection for body-text-only regions)
+    # 1. Count vector drawing paths that intersect the clip region
+    draw_count = 0
     for d in page_drawings:
-        dr = d.get("rect")
-        if dr is None or dr.is_empty:
+        try:
+            dr = fitz.Rect(d["rect"])
+        except (KeyError, TypeError, ValueError):
             continue
-        inter = clip_rect & fitz.Rect(dr)
-        if not inter.is_empty and inter.width * inter.height >= MIN_DRAWING_AREA_SQ_PTS:
-            return True
+        if dr.is_empty or dr.is_infinite:
+            continue
+        if not (clip_rect & dr).is_empty:
+            draw_count += 1
+            if draw_count >= MIN_DRAWING_COUNT:
+                return True
 
     # 2. Raster image blocks (block_type == 1)
     for b in all_blocks:
         if len(b) >= 7 and b[6] == 1:
-            inter = clip_rect & fitz.Rect(b[0], b[1], b[2], b[3])
-            if not inter.is_empty:
+            if not (clip_rect & fitz.Rect(b[0], b[1], b[2], b[3])).is_empty:
                 return True
 
     # 3. Text-coverage fallback

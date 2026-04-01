@@ -13,10 +13,54 @@ const TYPE_OPTIONS = [
   { value: "other", label: "Skip" },
 ];
 
+/**
+ * Suggest a module type from the caption text using keyword matching.
+ *
+ * Signal priority (highest to lowest):
+ * 1. Caption contains explicit type keywords  (most reliable)
+ * 2. Caption contains section-context words   (design / eval section hints)
+ * 3. Figure number heuristic: Figure 1 is almost always the overview/arch figure
+ *
+ * Returns one of: "arch_figure" | "eval_figure" | "algorithm" | "other"
+ */
+function suggestModuleType(caption: string): string {
+  const t = (caption ?? "").toLowerCase();
+
+  // ── Architecture / system design signals ───────────────────────────────
+  if (
+    /architect|overview|system\s+design|high.?level\s+design|framework|topology|pipeline\s+overview|workflow|component\s+diagram|block\s+diagram/.test(t)
+  ) return "arch_figure";
+
+  // ── Evaluation / results signals ───────────────────────────────────────
+  if (
+    /evaluat|result|performance|latency|throughput|comparison|speedup|overhead|benchmark|cdf|percentile|p99|p95|scalab|micro.?bench|experiment|median|tail/.test(t)
+  ) return "eval_figure";
+
+  // ── Algorithm signals ──────────────────────────────────────────────────
+  if (/algorithm|pseudo.?code|listing|procedure|pseudocode/.test(t))
+    return "algorithm";
+
+  // ── Weaker design signals (second pass) ───────────────────────────────
+  if (/design|structure|layout|layer|component|module\s+structure|abstraction/.test(t))
+    return "arch_figure";
+
+  // ── Weaker eval signals (second pass) ─────────────────────────────────
+  if (/improve|reduce|cost|resource|utilization|rate|time|memory|cpu|io\s+/.test(t))
+    return "eval_figure";
+
+  // ── Figure-number heuristic: Figure 1 is almost always the arch overview ─
+  const numMatch = caption.match(/(?:Figure|Fig\.?)\s*(\d+)/i);
+  if (numMatch && parseInt(numMatch[1], 10) === 1) return "arch_figure";
+
+  return "other";
+}
+
 export default function ConfirmPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [selections, setSelections] = useState<Record<string, string>>({});
+  // Track which item IDs were auto-suggested (not manually set by the user)
+  const [suggested, setSuggested] = useState<Set<string>>(new Set());
   const [paperTitle, setPaperTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [extracting, setExtracting] = useState(false);
@@ -46,10 +90,19 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
         setExtracting(false);
         setItems(all);
         const init: Record<string, string> = {};
+        const autoSuggested = new Set<string>();
         all.forEach((item) => {
-          init[item.id] = item.module_type === "other" ? "other" : item.module_type;
+          if (item.module_type !== "other") {
+            // Already classified (e.g. abstract added by backend)
+            init[item.id] = item.module_type;
+          } else {
+            const suggestion = suggestModuleType(item.caption ?? "");
+            init[item.id] = suggestion;
+            if (suggestion !== "other") autoSuggested.add(item.id);
+          }
         });
         setSelections(init);
+        setSuggested(autoSuggested);
       } catch (e) {
         console.error(e);
       } finally {
@@ -68,6 +121,7 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
     const next: Record<string, string> = {};
     items.forEach((item) => (next[item.id] = type));
     setSelections(next);
+    setSuggested(new Set()); // manual override clears all suggestion badges
   };
 
   const handleSubmit = async () => {
@@ -144,6 +198,7 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {items.map((item) => {
             const selected = selections[item.id] ?? "other";
+            const isSuggested = suggested.has(item.id);
             const borderColor =
               selected === "arch_figure"
                 ? "border-blue-400 ring-1 ring-blue-300"
@@ -165,7 +220,16 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
                 ) : (
                   <div className="aspect-video w-full rounded bg-gray-100" />
                 )}
-                <p className="text-[11px] text-gray-400">Page {item.page_number}</p>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-gray-400">Page {item.page_number}</p>
+                  {isSuggested && (
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 border border-amber-200">
+                      auto
+                    </span>
+                  )}
+                </div>
+
                 {item.caption && (
                   <p className="line-clamp-2 text-[11px] leading-tight text-gray-600">
                     {item.caption}
@@ -173,9 +237,15 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
                 )}
                 <select
                   value={selected}
-                  onChange={(e) =>
-                    setSelections((prev) => ({ ...prev, [item.id]: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setSelections((prev) => ({ ...prev, [item.id]: e.target.value }));
+                    // Clear suggestion badge once user manually changes the value
+                    setSuggested((prev) => {
+                      const next = new Set(prev);
+                      next.delete(item.id);
+                      return next;
+                    });
+                  }}
                   className="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-400"
                 >
                   {TYPE_OPTIONS.map((opt) => (
