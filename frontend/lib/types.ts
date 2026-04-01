@@ -1,4 +1,4 @@
-export type ProcessingStatus = "pending" | "processing" | "done" | "failed";
+export type ProcessingStatus = "pending" | "processing" | "done" | "failed" | "awaiting_metadata";
 export type ModuleType = "arch_figure" | "abstract" | "eval_figure" | "algorithm" | "other";
 
 export interface Paper {
@@ -8,6 +8,7 @@ export interface Paper {
   year: number | null;
   authors: string | null;
   doi: string | null;
+  institution?: string;
   pdf_path: string;
   processing_status: ProcessingStatus;
   uploaded_at: string;
@@ -85,4 +86,27 @@ export interface UserAnnotation {
   note_text: string;
   tags: string[];
   created_at: string;
+}
+
+export interface VlmMetadataResult {
+  title?: string;
+  authors?: string[];
+  year?: number;
+  venue?: string;
+  institution?: string;
+}
+
+export interface ScholarSuggestion {
+  title?: string;
+  authors?: string[];
+  year?: number;
+  venue?: string;
+  doi?: string;
+}
+
+export interface PaperMetadataResponse {
+  id: string;
+  status: "extracting" | "ready";
+  vlm_result?: VlmMetadataResult;
+  scholar_suggestion?: ScholarSuggestion;
 }

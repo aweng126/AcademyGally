@@ -1,4 +1,4 @@
-import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation } from "./types";
+import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -36,6 +36,32 @@ export const uploadPaper = (form: FormData) =>
     if (!r.ok) throw new Error(`Upload failed: ${await r.text()}`);
     return r.json() as Promise<Paper>;
   });
+
+export async function getPaperMetadata(id: string): Promise<PaperMetadataResponse> {
+  return request<PaperMetadataResponse>(`/papers/${id}/metadata`);
+}
+
+export async function confirmPaperMetadata(
+  id: string,
+  data: {
+    title: string;
+    authors?: string;
+    year?: number;
+    venue?: string;
+    institution?: string;
+    doi?: string;
+  }
+): Promise<Paper> {
+  return request<Paper>(`/papers/${id}/metadata`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePaper(id: string): Promise<void> {
+  await request<void>(`/papers/${id}`, { method: "DELETE" });
+}
 
 export const confirmItems = (
   paperId: string,
