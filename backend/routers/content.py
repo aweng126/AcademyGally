@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -186,3 +186,20 @@ def delete_annotation(item_id: str, annotation_id: str, db: Session = Depends(ge
     db.delete(ann)
     db.commit()
     return {"status": "deleted"}
+
+
+@router.post("/{item_id}/retry")
+def retry_analysis(item_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Re-queue a failed ContentItem for VLM analysis."""
+    item = db.query(ContentItem).filter(ContentItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="ContentItem not found")
+    if item.module_type == "other":
+        raise HTTPException(status_code=400, detail="Cannot analyze unclassified items")
+
+    item.processing_status = "pending"
+    db.commit()
+
+    from routers.papers import _analyze_item_bg
+    background_tasks.add_task(_analyze_item_bg, item_id)
+    return {"status": "queued", "item_id": item_id}

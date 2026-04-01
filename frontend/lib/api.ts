@@ -132,3 +132,8 @@ export const updatePaperProgress = (
 
 export const removePaperFromTopic = (topicId: string, paperId: string) =>
   request(`/topics/${topicId}/papers/${paperId}`, { method: "DELETE" });
+
+export const retryAnalysis = (itemId: string) =>
+  request<{ status: string; item_id: string }>(`/content/${itemId}/retry`, {
+    method: "POST",
+  });
