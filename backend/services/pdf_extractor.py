@@ -3,14 +3,23 @@ import re
 import fitz  # PyMuPDF
 from .module_registry import ExtractedItem
 
-# Ignore images smaller than this in either dimension (px) — logos, icons, decorative elements
-MIN_IMAGE_PX = 120
+# Ignore rendered crops smaller than this in either dimension (px)
+MIN_IMAGE_PX = 100
+
+# Render resolution
+_DPI = 150
+_MAT = fitz.Matrix(_DPI / 72, _DPI / 72)
 
 
 def extract_images_from_pdf(pdf_path: str, output_dir: str, paper_id: str) -> list[ExtractedItem]:
     """
-    Extract all non-trivial images from a PDF using PyMuPDF.
-    Saves images to output_dir and returns ExtractedItem list with relative paths.
+    Extract figures from a PDF by rendering pages and cropping the region
+    above each 'Figure N' / 'Fig. N' caption.
+
+    Works for both raster-embedded and vector-graphics figures (the common case
+    for LaTeX-compiled papers).  For each caption found the area between the
+    previous caption's bottom edge (or the page top) and the current caption's
+    top edge is rendered as a PNG.
     """
     os.makedirs(output_dir, exist_ok=True)
     items: list[ExtractedItem] = []
@@ -20,49 +29,49 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str, paper_id: str) -> li
         for page_index in range(len(doc)):
             page = doc[page_index]
             page_num = page_index + 1
-            page_text = page.get_text()
-            captions = _extract_captions(page_text)
-            image_list = page.get_images(full=True)
 
-            fig_idx = 0
-            for img_meta in image_list:
-                xref = img_meta[0]
-                base_image = doc.extract_image(xref)
+            # Collect text blocks that contain a "Figure N" caption
+            blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, block_no, block_type)
+            caption_blocks = [
+                b for b in blocks
+                if len(b) >= 5 and re.search(r'(?:Figure|Fig\.?)\s*\d+', b[4], re.IGNORECASE)
+            ]
+            if not caption_blocks:
+                continue
 
-                w, h = base_image.get("width", 0), base_image.get("height", 0)
-                if w < MIN_IMAGE_PX or h < MIN_IMAGE_PX:
+            # Process captions top-to-bottom
+            caption_blocks.sort(key=lambda b: b[1])
+
+            prev_y = 0.0
+            for cap_block in caption_blocks:
+                cx0, cy0, cx1, cy1, cap_text = cap_block[:5]
+
+                fig_y0 = prev_y
+                fig_y1 = cy0 - 2  # just above caption text
+
+                # Skip if the available region is too small to be a real figure
+                if fig_y1 - fig_y0 < MIN_IMAGE_PX:
+                    prev_y = cy1
                     continue
 
-                ext = base_image.get("ext", "png")
-                if ext not in ("png", "jpeg", "jpg", "bmp"):
-                    ext = "png"
+                # Use full page width so two-column figures are not clipped
+                clip = fitz.Rect(0, fig_y0, page.rect.width, fig_y1)
+                pix = page.get_pixmap(matrix=_MAT, clip=clip)
 
-                filename = f"p{page_num}_{fig_idx}.{ext}"
-                abs_path = os.path.join(output_dir, filename)
-                with open(abs_path, "wb") as f:
-                    f.write(base_image["image"])
+                if pix.width < MIN_IMAGE_PX or pix.height < MIN_IMAGE_PX:
+                    prev_y = cy1
+                    continue
 
-                caption = captions[fig_idx] if fig_idx < len(captions) else None
+                filename = f"p{page_num}_{len(items)}.png"
+                pix.save(os.path.join(output_dir, filename))
 
-                items.append(
-                    ExtractedItem(
-                        image_path=f"{paper_id}/{filename}",
-                        page_number=page_num,
-                        caption=caption,
-                    )
-                )
-                fig_idx += 1
+                items.append(ExtractedItem(
+                    image_path=f"{paper_id}/{filename}",
+                    page_number=page_num,
+                    caption=" ".join(cap_text.split())[:500],
+                ))
+                prev_y = cy1  # advance past caption for next figure on the same page
     finally:
         doc.close()
 
     return items
-
-
-def _extract_captions(text: str) -> list[str]:
-    """
-    Extract all 'Figure N' captions from a page's text.
-    Returns list ordered by appearance.
-    """
-    pattern = r"(?:Figure|Fig\.?)\s*\d+[.:]?\s*(.+?)(?=(?:Figure|Fig\.?)\s*\d+|\Z)"
-    matches = re.findall(pattern, text, re.DOTALL | re.IGNORECASE)
-    return [" ".join(m.split())[:500] for m in matches]

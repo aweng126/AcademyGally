@@ -12,6 +12,7 @@ import os
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from urllib.error import HTTPError
 
 import fitz  # PyMuPDF
 
@@ -83,6 +84,12 @@ def _query_semantic_scholar(title: str) -> dict | None:
             "venue": p.get("venue"),
             "doi": (p.get("externalIds") or {}).get("DOI"),
         }
+    except HTTPError as e:
+        if e.code == 429:
+            logger.debug("Semantic Scholar rate limited (429), skipping suggestions")
+        else:
+            logger.warning("Semantic Scholar query failed (HTTP %s): %s", e.code, e)
+        return None
     except Exception as e:
-        logger.warning("Semantic Scholar query failed: %s", e, exc_info=True)
+        logger.warning("Semantic Scholar query failed: %s", e)
         return None
