@@ -14,6 +14,7 @@ export default function MetadataPage({ params }: Props) {
   const { id } = params;
 
   const [status, setStatus] = useState<"extracting" | "ready">("extracting");
+  const [progress, setProgress] = useState(0);
   const [scholar, setScholar] = useState<ScholarSuggestion | null>(null);
 
   // Form state
@@ -28,6 +29,19 @@ export default function MetadataPage({ params }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Animate progress bar non-linearly toward ~90% while extracting
+  useEffect(() => {
+    if (status !== "extracting") {
+      setProgress(100);
+      return;
+    }
+    progressRef.current = setInterval(() => {
+      setProgress((p) => p + (90 - p) * 0.07);
+    }, 800);
+    return () => clearInterval(progressRef.current!);
+  }, [status]);
 
   function applyVlm(v: VlmMetadataResult) {
     setTitle(v.title ?? "");
@@ -107,10 +121,16 @@ export default function MetadataPage({ params }: Props) {
   if (status === "extracting") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto" />
-          <p className="text-gray-600">Extracting metadata from your PDF…</p>
-          <p className="mt-1 text-sm text-gray-400">This usually takes 5–15 seconds</p>
+        <div className="w-80 text-center">
+          <p className="mb-3 font-medium text-gray-700">Extracting metadata from your PDF…</p>
+          {/* Progress bar */}
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-all duration-700 ease-out"
+              style={{ width: `${Math.min(progress, 99)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-gray-400">This usually takes 5–15 seconds</p>
         </div>
       </div>
     );

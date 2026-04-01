@@ -19,22 +19,49 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [paperTitle, setPaperTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getPaper(params.id)
-      .then((paper) => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const paper = await getPaper(params.id);
+        if (cancelled) return;
+
         setPaperTitle(paper.title);
+        const status = paper.processing_status;
         const all = paper.content_items ?? [];
+
+        // Still extracting — keep polling
+        if ((status === "pending" || status === "processing") && all.length === 0) {
+          setExtracting(true);
+          pollRef.current = setTimeout(poll, 2000);
+          return;
+        }
+
+        setExtracting(false);
         setItems(all);
         const init: Record<string, string> = {};
         all.forEach((item) => {
           init[item.id] = item.module_type === "other" ? "other" : item.module_type;
         });
         setSelections(init);
-      })
-      .finally(() => setLoading(false));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    poll();
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
   }, [params.id]);
 
   const handleSelectAll = (type: string) => {
@@ -62,10 +89,14 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
 
   const toAnalyze = items.filter((i) => (selections[i.id] ?? "other") !== "other").length;
 
-  if (loading) {
+  if (loading || extracting) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-400">
-        Loading figures...
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-gray-400">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+        <p>{extracting ? "Extracting figures from PDF…" : "Loading figures…"}</p>
+        {extracting && (
+          <p className="text-xs text-gray-400">This usually takes 5–20 seconds</p>
+        )}
       </div>
     );
   }
