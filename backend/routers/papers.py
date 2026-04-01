@@ -239,6 +239,57 @@ async def upload_paper(
     return paper
 
 
+from pydantic import BaseModel as _BaseModel
+
+
+class ArxivImportRequest(_BaseModel):
+    url: str
+
+
+@router.post("/arxiv", response_model=PaperOut)
+async def import_arxiv(
+    background_tasks: BackgroundTasks,
+    body: ArxivImportRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Import a paper from an arXiv URL.
+    Body: { "url": "https://arxiv.org/abs/2310.12345" }
+    """
+    url = body.url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+
+    try:
+        from services.arxiv_fetcher import extract_arxiv_id, download_arxiv_pdf
+        arxiv_id = extract_arxiv_id(url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    pdfs_dir = os.getenv("PDFS_DIR", "./data/pdfs")
+    os.makedirs(pdfs_dir, exist_ok=True)
+    paper_id = str(uuid.uuid4())
+    pdf_path = os.path.join(pdfs_dir, f"{paper_id}.pdf")
+
+    try:
+        download_arxiv_pdf(arxiv_id, pdf_path)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to download PDF from arXiv: {e}")
+
+    paper = Paper(
+        id=paper_id,
+        title="",
+        pdf_path=pdf_path,
+        processing_status="awaiting_metadata",
+    )
+    db.add(paper)
+    db.commit()
+    db.refresh(paper)
+
+    background_tasks.add_task(_extract_metadata_bg, paper.id, pdf_path)
+    return paper
+
+
 @router.get("")
 def list_papers(q: Optional[str] = None, venue: Optional[str] = None, db: Session = Depends(get_db)):
     """List all papers with their ContentItems. Optionally filter by title/author (q) or venue."""

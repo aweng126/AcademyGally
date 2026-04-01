@@ -137,3 +137,9 @@ export const retryAnalysis = (itemId: string) =>
   request<{ status: string; item_id: string }>(`/content/${itemId}/retry`, {
     method: "POST",
   });
+
+export const importFromArxiv = (url: string) =>
+  request<Paper>("/papers/arxiv", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });
