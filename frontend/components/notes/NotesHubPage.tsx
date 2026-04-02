@@ -80,6 +80,7 @@ export default function NotesHubPage() {
   const [loading, setLoading] = useState(true);
   const [pendingMaterial, setPendingMaterial] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [summaryContent, setSummaryContent] = useState({ principles: "", materials: "" });
 
   useEffect(() => {
     setLoading(true);
@@ -102,14 +103,46 @@ export default function NotesHubPage() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-0 p-6">
       {/* Page header */}
-      <div className="mb-5">
-        <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
-          ← Library
-        </Link>
-        <h1 className="text-xl font-bold text-gray-900">Notes Hub</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          汇聚所有笔记，提炼写作原则与积累素材
-        </p>
+      <div className="mb-5 flex items-start justify-between">
+        <div>
+          <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
+            ← Library
+          </Link>
+          <h1 className="text-xl font-bold text-gray-900">Notes Hub</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            汇聚所有笔记，提炼写作原则与积累素材
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            const sectionLabel = MODULE_TABS.find((t) => t.value === activeTab)?.label ?? activeTab;
+            const lines: string[] = [`# Writing Notes — ${sectionLabel}`, ""];
+            if (summaryContent.principles.trim()) {
+              lines.push("## Writing Principles", "", summaryContent.principles.trim(), "");
+            }
+            if (summaryContent.materials.trim()) {
+              lines.push("## Accumulated Materials", "", summaryContent.materials.trim(), "");
+            }
+            if (notes.length > 0) {
+              lines.push("## Notes", "");
+              notes.forEach((n) => {
+                lines.push(`### ${n.paper_title}${n.venue || n.year ? ` (${[n.venue, n.year].filter(Boolean).join(" · ")})` : ""}`);
+                if (n.item_caption) lines.push(`> ${n.item_caption}`);
+                lines.push("", n.note_text, "");
+              });
+            }
+            const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `notes-${activeTab}-${new Date().toISOString().slice(0, 10)}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+        >
+          Export .md
+        </button>
       </div>
 
       {/* Module tabs */}
@@ -202,6 +235,7 @@ export default function NotesHubPage() {
               moduleType={activeTab}
               pendingMaterial={pendingMaterial}
               onPendingMaterialConsumed={() => setPendingMaterial(null)}
+              onContentChange={(p, m) => setSummaryContent({ principles: p, materials: m })}
             />
           </div>
         </div>

@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import type { Topic } from "@/lib/types";
 import { getTopics, createTopic } from "@/lib/api";
 import TopicCard from "./TopicCard";
-import StudyFocusSelector, { type StudyFocus, getStoredFocus } from "./StudyFocusSelector";
+import { TopicCardSkeleton } from "@/components/shared/Skeleton";
 
 export default function TopicStudyView() {
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [focus, setFocus] = useState<StudyFocus>("all");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -17,7 +16,6 @@ export default function TopicStudyView() {
   const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
-    setFocus(getStoredFocus());
     getTopics()
       .then(setTopics)
       .catch(console.error)
@@ -43,7 +41,7 @@ export default function TopicStudyView() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <StudyFocusSelector value={focus} onChange={setFocus} />
+        <div />
         <button
           onClick={() => setShowForm((v) => !v)}
           className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -85,7 +83,9 @@ export default function TopicStudyView() {
       )}
 
       {loading && topics.length === 0 && (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => <TopicCardSkeleton key={i} />)}
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,7 +95,19 @@ export default function TopicStudyView() {
       </div>
 
       {!loading && topics.length === 0 && (
-        <p className="text-sm text-gray-400">No topics yet. Create one to start organising your reading.</p>
+        <div className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-16 text-center">
+          <div className="text-5xl">📚</div>
+          <div>
+            <p className="text-lg font-semibold text-gray-700">No topics yet</p>
+            <p className="mt-1 text-sm text-gray-500">Create a topic to organise papers and track your reading progress.</p>
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            + New Topic
+          </button>
+        </div>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { getContent } from "@/lib/api";
 import FigureGrid from "./FigureGrid";
 import CompareView from "./CompareView";
 import PhraseLibraryView from "./PhraseLibraryView";
+import { FigureCardSkeleton } from "@/components/shared/Skeleton";
 
 type ActiveTab = ModuleType | "compare" | "phrases";
 
@@ -21,11 +22,16 @@ const MODULE_TABS: { value: ActiveTab; label: string }[] = [
 export default function BrowseByModuleView() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("arch_figure");
   const [items, setItems] = useState<ContentItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   useEffect(() => {
     if (activeTab === "compare" || activeTab === "phrases") return;
     setItems([]);
-    getContent({ module_type: activeTab as ModuleType }).then(setItems).catch(console.error);
+    setLoadingItems(true);
+    getContent({ module_type: activeTab as ModuleType })
+      .then(setItems)
+      .catch(console.error)
+      .finally(() => setLoadingItems(false));
   }, [activeTab]);
 
   return (
@@ -53,6 +59,10 @@ export default function BrowseByModuleView() {
         <CompareView />
       ) : activeTab === "phrases" ? (
         <PhraseLibraryView />
+      ) : loadingItems ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => <FigureCardSkeleton key={i} />)}
+        </div>
       ) : (
         <FigureGrid items={items} />
       )}

@@ -9,6 +9,8 @@ interface Props {
   /** Note text to append to materials when user clicks "→ 素材" on a note */
   pendingMaterial: string | null;
   onPendingMaterialConsumed: () => void;
+  /** Called whenever principles or materials change, for export */
+  onContentChange?: (principles: string, materials: string) => void;
 }
 
 function AutosaveArea({
@@ -59,7 +61,7 @@ function AutosaveArea({
   );
 }
 
-export default function SummaryEditor({ moduleType, pendingMaterial, onPendingMaterialConsumed }: Props) {
+export default function SummaryEditor({ moduleType, pendingMaterial, onPendingMaterialConsumed, onContentChange }: Props) {
   const [principles, setPrinciples] = useState("");
   const [materials, setMaterials] = useState("");
   const [savingP, setSavingP] = useState(false);
@@ -99,6 +101,9 @@ export default function SummaryEditor({ moduleType, pendingMaterial, onPendingMa
     setSavedM(true);
     setTimeout(() => setSavedM(false), 2000);
   }, [pendingMaterial, moduleType, onPendingMaterialConsumed]);
+
+  // Notify parent of content changes for export
+  useEffect(() => { onContentChange?.(principles, materials); }, [principles, materials]); // eslint-disable-line
 
   const handleSavePrinciples = async () => {
     setSavingP(true);

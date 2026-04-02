@@ -7,6 +7,7 @@ import type { Paper } from "@/lib/types";
 import { getPapers, uploadPaper } from "@/lib/api";
 import PaperCard from "./PaperCard";
 import VenueFilter from "./VenueFilter";
+import { PaperCardSkeleton } from "@/components/shared/Skeleton";
 
 export default function LibraryView() {
   const searchParams = useSearchParams();
@@ -127,9 +128,11 @@ export default function LibraryView() {
         </div>
       )}
 
-      {/* Papers list */}
+      {/* Papers list — skeleton during initial load */}
       {loading && papers.length === 0 && (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => <PaperCardSkeleton key={i} />)}
+        </div>
       )}
 
       <div className="flex flex-col gap-3">

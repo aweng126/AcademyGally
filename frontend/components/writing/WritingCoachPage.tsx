@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { CoachResponse } from "@/lib/types";
 import { getWritingFeedback } from "@/lib/api";
@@ -14,6 +14,44 @@ const MODES = [
 ] as const;
 
 type Mode = (typeof MODES)[number]["value"];
+
+interface CoachSession {
+  id: string;
+  timestamp: number;
+  mode: Mode;
+  draftText: string;
+  result: CoachResponse;
+}
+
+const HISTORY_KEY = "academy_coach_history";
+const MAX_HISTORY = 10;
+
+function loadHistory(): CoachSession[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveSession(session: CoachSession) {
+  const history = loadHistory();
+  const updated = [session, ...history].slice(0, MAX_HISTORY);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+}
+
+function formatTime(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+const MODE_LABEL: Record<Mode, string> = {
+  abstract: "Abstract",
+  intro_paragraph: "Introduction §",
+  related_work_paragraph: "Related Work §",
+};
 
 export default function WritingCoachPage({
   initialExemplarId,
@@ -29,6 +67,13 @@ export default function WritingCoachPage({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CoachResponse | null>(null);
 
+  const [history, setHistory] = useState<CoachSession[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!draftText.trim()) return;
@@ -42,6 +87,15 @@ export default function WritingCoachPage({
         exemplar_item_ids: exemplarIds.length > 0 ? exemplarIds : undefined,
       });
       setResult(res);
+      const session: CoachSession = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        mode,
+        draftText,
+        result: res,
+      };
+      saveSession(session);
+      setHistory(loadHistory());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed. Please try again.");
     } finally {
@@ -49,17 +103,79 @@ export default function WritingCoachPage({
     }
   }
 
+  function loadSession(session: CoachSession) {
+    setMode(session.mode);
+    setDraftText(session.draftText);
+    setResult(session.result);
+    setShowHistory(false);
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY);
+    setHistory([]);
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
-          ← Library
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Writing Coach</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Paste your draft text and get AI feedback based on exemplar papers from your library.
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
+            ← Library
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Writing Coach</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Paste your draft text and get AI feedback based on exemplar papers from your library.
+          </p>
+        </div>
+        {history.length > 0 && (
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className="relative rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+          >
+            History
+            <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-600">
+              {history.length}
+            </span>
+          </button>
+        )}
       </div>
+
+      {/* History panel */}
+      {showHistory && (
+        <div className="mb-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Recent sessions
+            </p>
+            <button
+              onClick={clearHistory}
+              className="text-xs text-red-400 hover:text-red-600"
+            >
+              Clear all
+            </button>
+          </div>
+          <div className="flex flex-col divide-y">
+            {history.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => loadSession(s)}
+                className="flex items-start gap-3 py-2.5 text-left hover:bg-gray-50 transition px-2 rounded"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="line-clamp-1 text-sm text-gray-700">{s.draftText.slice(0, 80)}…</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium">{MODE_LABEL[s.mode]}</span>
+                    <span>{formatTime(s.timestamp)}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 text-sm font-bold text-gray-500">
+                  {s.result.overall_score}<span className="text-xs font-normal text-gray-300">/5</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Left: Input panel */}
