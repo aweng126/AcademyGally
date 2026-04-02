@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import NavTabs from "@/components/layout/NavTabs";
 import SearchBar from "@/components/layout/SearchBar";
@@ -17,7 +18,16 @@ function GalleryContent() {
   return (
     <main className="min-h-screen">
       <header className="border-b bg-white px-6 py-4">
-        <h1 className="text-xl font-semibold">AcademyGally</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">AcademyGally</h1>
+          <Link
+            href="/settings"
+            className="text-gray-400 hover:text-gray-700 text-lg"
+            title="Settings"
+          >
+            ⚙
+          </Link>
+        </div>
         <div className="mt-3 flex items-center gap-4">
           <NavTabs active={view} />
           <SearchBar />
