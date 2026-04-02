@@ -19,10 +19,9 @@ export default function AddToTopicButton({ paperId, compact = false }: Props) {
   const [addError, setAddError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Fetch topics when dropdown opens for the first time
+  // Fetch topics every time the dropdown opens so the list is always fresh
   useEffect(() => {
     if (!open) return;
-    if (topics.length > 0) return;
     setLoading(true);
     getTopics()
       .then((ts) => {
@@ -36,7 +35,7 @@ export default function AddToTopicButton({ paperId, compact = false }: Props) {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [open, paperId, topics.length]);
+  }, [open, paperId]);
 
   // Close on outside click
   useEffect(() => {
