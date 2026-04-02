@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import type { Paper } from "@/lib/types";
-import { getPapers, uploadPaper, importFromArxiv } from "@/lib/api";
+import { getPapers, uploadPaper } from "@/lib/api";
 import PaperCard from "./PaperCard";
 import VenueFilter from "./VenueFilter";
 
@@ -20,10 +20,6 @@ export default function LibraryView() {
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [arxivUrl, setArxivUrl] = useState("");
-  const [arxivImporting, setArxivImporting] = useState(false);
-  const [arxivError, setArxivError] = useState<string | null>(null);
-
   const loadPapers = useCallback(() => {
     setLoading(true);
     const params: { q?: string; venue?: string; year?: number } = {};
@@ -49,20 +45,6 @@ export default function LibraryView() {
     const t = setTimeout(loadPapers, 3000);
     return () => clearTimeout(t);
   }, [papers, loadPapers]);
-
-  async function handleArxivImport(e: React.FormEvent) {
-    e.preventDefault();
-    if (!arxivUrl.trim()) return;
-    setArxivImporting(true);
-    setArxivError(null);
-    try {
-      const paper = await importFromArxiv(arxivUrl.trim());
-      router.push(`/papers/${paper.id}/metadata`);
-    } catch (err) {
-      setArxivError(err instanceof Error ? err.message : "Import failed");
-      setArxivImporting(false);
-    }
-  }
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -114,26 +96,7 @@ export default function LibraryView() {
             </button>
           </form>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-gray-500 font-medium">Or import from arXiv:</p>
-            <form onSubmit={handleArxivImport} className="flex items-center gap-2">
-              <input
-                type="url"
-                placeholder="https://arxiv.org/abs/2310.12345"
-                value={arxivUrl}
-                onChange={(e) => { setArxivUrl(e.target.value); setArxivError(null); }}
-                className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-              />
-              <button
-                type="submit"
-                disabled={arxivImporting || !arxivUrl.trim()}
-                className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
-              >
-                {arxivImporting ? "Importing…" : "Import"}
-              </button>
-            </form>
-            {arxivError && <p className="text-xs text-red-500">{arxivError}</p>}
-          </div>
+
         </div>
       )}
 
