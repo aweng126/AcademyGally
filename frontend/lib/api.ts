@@ -1,4 +1,4 @@
-import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry, CoachResponse, PhraseItem, PhraseFavorite, UserProfile, ModelConfigOut, ModelConfigIn, TestResult, ProviderPreset } from "./types";
+import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry, CoachResponse, PhraseItem, PhraseFavorite, UserProfile, ModelConfigOut, ModelConfigIn, TestResult, ProviderPreset, NoteItem, ModuleSummary } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -214,3 +214,22 @@ export const testModelConnection = () =>
   request<TestResult>("/settings/model/test", { method: "POST" });
 
 export const getModelPresets = () => request<ProviderPreset[]>("/settings/model/presets");
+
+// ─── Notes Hub ───────────────────────────────────────────────────────────────
+
+export const getNotesByModule = (moduleType?: string) => {
+  const qs = moduleType ? `?module_type=${encodeURIComponent(moduleType)}` : "";
+  return request<NoteItem[]>(`/notes/items${qs}`);
+};
+
+export const getModuleSummary = (moduleType: string) =>
+  request<ModuleSummary>(`/notes/summary/${encodeURIComponent(moduleType)}`);
+
+export const updateModuleSummary = (
+  moduleType: string,
+  body: { principles?: string; materials?: string }
+) =>
+  request<ModuleSummary>(`/notes/summary/${encodeURIComponent(moduleType)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });

@@ -193,6 +193,29 @@ export interface PhraseItem {
   why_effective: string;
 }
 
+// ─── Notes Hub ────────────────────────────────────────────────────────────
+
+export interface NoteItem {
+  annotation_id: string;
+  item_id: string;
+  paper_id: string;
+  paper_title: string;
+  venue: string | null;
+  year: number | null;
+  module_type: string;
+  item_caption: string | null;
+  note_text: string;
+  tags: string[];
+  created_at: string;
+}
+
+export interface ModuleSummary {
+  module_type: string;
+  principles: string | null;
+  materials: string | null;
+  updated_at: string | null;
+}
+
 export interface PhraseFavorite {
   annotation_id: string;
   item_id: string;

@@ -26,6 +26,7 @@ import models.paper  # noqa: F401, E402
 import models.content_item  # noqa: F401, E402
 import models.topic  # noqa: F401, E402
 import models.annotation  # noqa: F401, E402
+import models.summary  # noqa: F401, E402
 
 target_metadata = Base.metadata
 
