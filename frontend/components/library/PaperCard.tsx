@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Paper } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ModuleChip from "./ModuleChip";
@@ -17,9 +18,11 @@ export default function PaperCard({
   paper: Paper;
   onDelete?: (id: string) => void;
 }) {
+  const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [paperTopics, setPaperTopics] = useState<{ id: string; name: string }[]>([]);
 
   const items = paper.content_items ?? [];
   const archFigure = items.find((i) => i.module_type === "arch_figure" && i.image_path);
@@ -78,13 +81,28 @@ export default function PaperCard({
               return item ? <ModuleChip key={mt} moduleType={mt} status={item.processing_status} /> : null;
             })}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             {hasUnclassified && (
               <Link href={`/papers/${paper.id}/confirm`} className="text-xs text-blue-600 hover:underline">
                 Classify figures →
               </Link>
             )}
-            {paper.processing_status === "done" && <AddToTopicButton paperId={paper.id} compact />}
+            {paper.processing_status === "done" && (
+              <AddToTopicButton
+                paperId={paper.id}
+                compact
+                onTopicsChange={setPaperTopics}
+              />
+            )}
+            {paperTopics.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => router.push(`/topics/${t.id}`)}
+                className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-600 hover:border-gray-400 hover:bg-white transition"
+              >
+                {t.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
