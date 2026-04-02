@@ -269,20 +269,21 @@ def get_model_config(db: Session = Depends(get_db)) -> ModelConfigOut:
 @router.put("/model")
 def update_model_config(body: ModelConfigIn, db: Session = Depends(get_db)) -> ModelConfigOut:
     row = _get_or_create_model_config(db)
-    if body.preset is not None:
+    fields = body.model_fields_set
+    if "preset" in fields:
         row.preset = body.preset
-    if body.provider is not None:
+    if "provider" in fields:
         row.provider = body.provider
-    if body.anthropic_api_key is not None:
+    if "anthropic_api_key" in fields:
         row.anthropic_api_key = body.anthropic_api_key if body.anthropic_api_key else None
-    if body.vlm_api_key is not None:
+    if "vlm_api_key" in fields:
         row.vlm_api_key = body.vlm_api_key if body.vlm_api_key else None
-    if body.vlm_base_url is not None:
+    if "vlm_base_url" in fields:
         row.vlm_base_url = body.vlm_base_url if body.vlm_base_url else None
-    if body.vlm_model is not None:
+    if "vlm_model" in fields:
         row.vlm_model = body.vlm_model if body.vlm_model else None
-    if body.vlm_text_model is not None:
-        row.vlm_text_model = body.vlm_text_model if body.vlm_text_model else None
+    if "vlm_text_model" in fields:
+        row.vlm_text_model = body.vlm_text_model  # can be None (explicit clear)
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
@@ -343,6 +344,8 @@ def test_model_connection(db: Session = Depends(get_db)) -> TestResult:
             error_msg = "429 Rate Limited — Your API quota may be exhausted"
         elif "Name or service not known" in error_msg or "Connection refused" in error_msg or "Failed to establish" in error_msg:
             error_msg = "Cannot reach the endpoint — check Base URL or network"
+        else:
+            error_msg = "Unexpected error — check your configuration and try again"
         logger.warning("Model connection test failed: %s", e)
         return TestResult(status="failed", latency_ms=latency_ms, model=model, provider=provider, error=error_msg)
 

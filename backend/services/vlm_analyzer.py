@@ -66,6 +66,7 @@ def _vlm_text_model() -> str:
 # Lazy singletons
 _anthropic_client = None
 _openai_client = None
+_cached_config: dict | None = None  # module-level config cache
 
 
 # ---------------------------------------------------------------------------
@@ -76,27 +77,45 @@ def get_effective_vlm_config(db=None) -> dict:
     """
     Returns the effective VLM configuration as a plain dict.
     Priority: DB model_config row (user_id=1) → environment variables → built-in defaults.
-    Accepts an optional SQLAlchemy Session; if None, falls back to env only.
+    When db is provided, computes fresh and updates the module-level cache.
+    When db is None, returns the cached config if available, otherwise reads env vars.
     """
-    row = None
+    global _cached_config
+
     if db is not None:
+        # Always compute fresh when a DB session is provided
+        row = None
         try:
             from models.settings import ModelConfig
             row = db.query(ModelConfig).filter(ModelConfig.user_id == 1).first()
         except Exception:
             row = None
 
-    if row and row.provider:
-        return {
-            "provider": row.provider,
-            "vlm_model": row.vlm_model or os.getenv("VLM_MODEL", "glm-4v-plus"),
-            "vlm_text_model": row.vlm_text_model or row.vlm_model or os.getenv("VLM_TEXT_MODEL", os.getenv("VLM_MODEL", "glm-4v-plus")),
-            "vlm_base_url": row.vlm_base_url or os.getenv("VLM_BASE_URL", "https://api.openai.com/v1"),
-            "vlm_api_key": row.vlm_api_key or os.getenv("VLM_API_KEY", ""),
-            "anthropic_api_key": row.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", ""),
-            "source": "database",
-        }
+        if row and row.provider:
+            cfg = {
+                "provider": row.provider,
+                "vlm_model": row.vlm_model or os.getenv("VLM_MODEL", "glm-4v-plus"),
+                "vlm_text_model": row.vlm_text_model or row.vlm_model or os.getenv("VLM_TEXT_MODEL", os.getenv("VLM_MODEL", "glm-4v-plus")),
+                "vlm_base_url": row.vlm_base_url or os.getenv("VLM_BASE_URL", "https://api.openai.com/v1"),
+                "vlm_api_key": row.vlm_api_key or os.getenv("VLM_API_KEY", ""),
+                "anthropic_api_key": row.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", ""),
+                "source": "database",
+            }
+        else:
+            cfg = _build_env_config()
 
+        _cached_config = cfg  # prime the cache
+        return cfg
+
+    # No DB session — return cache if available
+    if _cached_config is not None:
+        return _cached_config
+
+    return _build_env_config()
+
+
+def _build_env_config() -> dict:
+    """Build config purely from environment variables."""
     env_provider = os.getenv("VLM_PROVIDER", "anthropic").lower()
     return {
         "provider": env_provider,
@@ -110,10 +129,11 @@ def get_effective_vlm_config(db=None) -> dict:
 
 
 def invalidate_vlm_clients() -> None:
-    """Reset the lazy client singletons so next call re-creates them with fresh config."""
-    global _anthropic_client, _openai_client
+    """Reset the lazy client singletons and config cache so next call re-creates them with fresh config."""
+    global _anthropic_client, _openai_client, _cached_config
     _anthropic_client = None
     _openai_client = None
+    _cached_config = None
 
 
 def _get_anthropic_client():
