@@ -130,43 +130,66 @@ export default function FeedbackDisplay({
         <div>
           <button
             onClick={() => setShowRewrite((v) => !v)}
-            className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-gray-50 transition"
+            className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left shadow-sm transition ${
+              showRewrite
+                ? "border-blue-300 bg-blue-50 hover:bg-blue-100"
+                : "border-gray-200 bg-white hover:bg-gray-50"
+            }`}
           >
-            <span className="text-sm font-semibold text-gray-700">
-              Suggested rewrite
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-base">✨</span>
+              <span className="text-sm font-semibold text-gray-800">
+                Suggested rewrite
+              </span>
+            </div>
             <span className="text-xs text-gray-400">{showRewrite ? "▲ hide" : "▼ show"}</span>
           </button>
 
           {showRewrite && (
-            <div className="mt-2 rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+              {/* Column headers */}
+              <div className="grid grid-cols-2">
+                <div className="flex items-center gap-2 border-b border-r border-gray-200 bg-red-50 px-4 py-2.5">
+                  <span className="text-sm">📝</span>
+                  <span className="text-xs font-bold uppercase tracking-wide text-red-600">
+                    Your Draft
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-gray-200 bg-green-50 px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">✅</span>
+                    <span className="text-xs font-bold uppercase tracking-wide text-green-700">
+                      AI Rewrite
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopy}
+                    className="rounded px-2 py-0.5 text-xs font-medium text-green-700 hover:bg-green-200 transition"
+                  >
+                    {copied ? "Copied ✓" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
               <div className="grid grid-cols-2 divide-x divide-gray-200">
-                {/* Original */}
-                <div className="p-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Your draft
-                  </p>
-                  <p className="whitespace-pre-wrap text-sm text-gray-600 leading-relaxed">
+                {/* Draft — warm neutral */}
+                <div className="bg-red-50/40 p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-500 line-clamp-none">
                     {draftText}
                   </p>
                 </div>
-                {/* Rewrite */}
-                <div className="p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
-                      AI rewrite
-                    </p>
-                    <button
-                      onClick={handleCopy}
-                      className="text-xs text-gray-400 hover:text-gray-600"
-                    >
-                      {copied ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                  <p className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
+                {/* Rewrite — clear positive */}
+                <div className="bg-green-50/60 p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800 font-[450]">
                     {result.suggested_rewrite}
                   </p>
                 </div>
+              </div>
+
+              {/* Footer hint */}
+              <div className="flex items-center justify-center gap-1.5 border-t border-gray-100 bg-gray-50 px-4 py-2">
+                <span className="text-xs text-gray-400">Left: original · Right: improved version</span>
               </div>
             </div>
           )}

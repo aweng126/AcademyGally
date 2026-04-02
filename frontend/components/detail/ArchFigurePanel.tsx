@@ -103,7 +103,7 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
         )}
 
         {a ? (
-          <div className="flex flex-1 flex-col gap-4 text-sm">
+          <div className="flex flex-1 min-w-0 flex-col gap-4 text-sm">
             {/* Core problem — blue hero card */}
             <div className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 shadow-sm">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-1">Core problem</h3>
@@ -139,8 +139,8 @@ export default function ArchFigurePanel({ item }: { item: ContentItem }) {
               {a.dataflow.length <= 4 ? (
                 <div className="flex flex-wrap items-center gap-1">
                   {a.dataflow.map((step, i) => (
-                    <div key={i} className="flex items-center gap-1">
-                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 whitespace-nowrap">
+                    <div key={i} className="flex items-center gap-1 min-w-0">
+                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 break-words">
                         <span className="font-semibold text-gray-500 mr-1">{i + 1}.</span>
                         {step}
                       </span>
