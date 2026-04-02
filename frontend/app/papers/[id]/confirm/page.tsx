@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ContentItem } from "@/lib/types";
 import { getPaper, confirmItems } from "@/lib/api";
 
@@ -159,12 +160,12 @@ export default function ConfirmPage({ params }: { params: { id: string } }) {
     <div className="mx-auto max-w-6xl p-6">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => router.back()}
-          className="mb-3 text-sm text-gray-500 hover:text-gray-800"
+        <Link
+          href={`/papers/${params.id}`}
+          className="mb-3 block text-sm text-gray-500 hover:text-gray-800"
         >
-          ← Back
-        </button>
+          ← Back to paper
+        </Link>
         <h1 className="text-xl font-bold">Classify Figures</h1>
         <p className="mt-1 text-sm text-gray-500">{paperTitle}</p>
         <p className="mt-0.5 text-sm text-gray-400">

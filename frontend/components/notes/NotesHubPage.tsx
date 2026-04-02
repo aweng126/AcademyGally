@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+
 import type { NoteItem } from "@/lib/types";
 import { getNotesByModule } from "@/lib/api";
 import SummaryEditor from "./SummaryEditor";
@@ -92,6 +93,9 @@ export default function NotesHubPage() {
     <div className="mx-auto flex max-w-7xl flex-col gap-0 p-6">
       {/* Page header */}
       <div className="mb-5">
+        <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
+          ← Library
+        </Link>
         <h1 className="text-xl font-bold text-gray-900">Notes Hub</h1>
         <p className="mt-0.5 text-sm text-gray-500">
           汇聚所有笔记，提炼写作原则与积累素材

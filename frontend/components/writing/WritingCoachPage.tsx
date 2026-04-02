@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { CoachResponse } from "@/lib/types";
 import { getWritingFeedback } from "@/lib/api";
 import ExemplarPicker from "./ExemplarPicker";
@@ -51,6 +52,9 @@ export default function WritingCoachPage({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6">
+        <Link href="/" className="mb-2 block text-sm text-gray-500 hover:text-gray-800">
+          ← Library
+        </Link>
         <h1 className="text-2xl font-bold text-gray-900">Writing Coach</h1>
         <p className="mt-1 text-sm text-gray-500">
           Paste your draft text and get AI feedback based on exemplar papers from your library.
