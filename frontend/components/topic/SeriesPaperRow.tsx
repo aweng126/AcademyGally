@@ -21,9 +21,24 @@ interface Props {
   topicId: string;
   visibleModules: ModuleType[];
   onProgressUpdate: (paperId: string, progress: Record<string, boolean>) => void;
+  onRemove: (paperId: string) => void;
+  onMoveUp: (paperId: string) => void;
+  onMoveDown: (paperId: string) => void;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-export default function SeriesPaperRow({ tp, topicId, visibleModules, onProgressUpdate }: Props) {
+export default function SeriesPaperRow({
+  tp,
+  topicId,
+  visibleModules,
+  onProgressUpdate,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -104,6 +119,36 @@ export default function SeriesPaperRow({ tp, topicId, visibleModules, onProgress
               {doneCount}/{allModuleEntries.length} modules
             </span>
           </div>
+        </div>
+
+        {/* Reorder and remove controls */}
+        <div
+          className="flex items-center gap-0.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            disabled={isFirst}
+            onClick={() => onMoveUp(tp.paper_id)}
+            className="rounded p-1 text-xs text-gray-400 hover:text-gray-700 disabled:opacity-25 disabled:cursor-not-allowed"
+            title="Move up"
+          >
+            ▲
+          </button>
+          <button
+            disabled={isLast}
+            onClick={() => onMoveDown(tp.paper_id)}
+            className="rounded p-1 text-xs text-gray-400 hover:text-gray-700 disabled:opacity-25 disabled:cursor-not-allowed"
+            title="Move down"
+          >
+            ▼
+          </button>
+          <button
+            onClick={() => onRemove(tp.paper_id)}
+            className="ml-1 rounded p-1 text-xs text-gray-400 hover:text-red-500"
+            title="Remove from topic"
+          >
+            ✕
+          </button>
         </div>
       </div>
 

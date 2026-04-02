@@ -139,6 +139,18 @@ export const updatePaperProgress = (
 export const removePaperFromTopic = (topicId: string, paperId: string) =>
   request(`/topics/${topicId}/papers/${paperId}`, { method: "DELETE" });
 
+export const updateTopic = (topicId: string, body: { name?: string; description?: string }) =>
+  request<Topic>(`/topics/${topicId}`, { method: "PUT", body: JSON.stringify(body) });
+
+export const deleteTopic = (topicId: string) =>
+  request<{ status: string }>(`/topics/${topicId}`, { method: "DELETE" });
+
+export const updatePaperOrder = (topicId: string, paperId: string, order: number) =>
+  request<TopicPaper>(`/topics/${topicId}/papers/${paperId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ order }),
+  });
+
 export const retryAnalysis = (itemId: string) =>
   request<{ status: string; item_id: string }>(`/content/${itemId}/retry`, {
     method: "POST",

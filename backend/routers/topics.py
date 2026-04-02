@@ -7,7 +7,7 @@ from database import get_db
 from models.topic import Topic, TopicPaper
 from models.paper import Paper
 from models.content_item import ContentItem
-from schemas import TopicCreate, TopicPaperAdd, ProgressUpdate
+from schemas import TopicCreate, TopicPaperAdd, ProgressUpdate, TopicUpdate, TopicPaperUpdate
 
 router = APIRouter()
 
@@ -40,17 +40,30 @@ def _paper_out(paper: Paper, items: list[ContentItem]) -> dict:
 def _topic_paper_out(tp: TopicPaper, db: Session) -> dict:
     paper = db.query(Paper).filter(Paper.id == tp.paper_id).first()
     items = db.query(ContentItem).filter(ContentItem.paper_id == tp.paper_id).all() if paper else []
-    progress = tp.progress_json
-    if isinstance(progress, str):
+
+    # Dynamically compute available modules from done ContentItems
+    seen: set[str] = set()
+    available_modules: list[str] = []
+    for i in items:
+        if i.processing_status == "done" and i.module_type != "other" and i.module_type not in seen:
+            seen.add(i.module_type)
+            available_modules.append(i.module_type)
+
+    # Normalize progress_json to only contain keys for available modules
+    stored = tp.progress_json
+    if isinstance(stored, str):
         try:
-            progress = json.loads(progress)
+            stored = json.loads(stored)
         except Exception:
-            progress = {}
+            stored = {}
+    normalized_progress = {m: bool(stored.get(m, False)) for m in available_modules}
+
     return {
         "topic_id": tp.topic_id,
         "paper_id": tp.paper_id,
         "order": tp.order,
-        "progress_json": progress,
+        "progress_json": normalized_progress,
+        "available_modules": available_modules,
         "paper": _paper_out(paper, items) if paper else None,
     }
 
@@ -126,7 +139,7 @@ def add_paper_to_topic(topic_id: str, body: TopicPaperAdd, db: Session = Depends
 def update_paper_progress(
     topic_id: str,
     paper_id: str,
-    body: ProgressUpdate,
+    body: TopicPaperUpdate,
     db: Session = Depends(get_db),
 ):
     tp = db.query(TopicPaper).filter(
@@ -136,9 +149,36 @@ def update_paper_progress(
     if not tp:
         raise HTTPException(status_code=404, detail="TopicPaper not found")
 
-    tp.progress_json = json.dumps(body.progress_json)
+    if body.progress_json is not None:
+        tp.progress_json = json.dumps(body.progress_json)
+    if body.order is not None:
+        tp.order = body.order
     db.commit()
     return _topic_paper_out(tp, db)
+
+
+@router.put("/{topic_id}")
+def update_topic(topic_id: str, body: TopicUpdate, db: Session = Depends(get_db)):
+    topic = db.query(Topic).filter(Topic.id == topic_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    if body.name is not None:
+        topic.name = body.name
+    if body.description is not None:
+        topic.description = body.description
+    db.commit()
+    return _topic_out(topic, db)
+
+
+@router.delete("/{topic_id}")
+def delete_topic(topic_id: str, db: Session = Depends(get_db)):
+    topic = db.query(Topic).filter(Topic.id == topic_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    db.query(TopicPaper).filter(TopicPaper.topic_id == topic_id).delete()
+    db.delete(topic)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @router.delete("/{topic_id}/papers/{paper_id}")

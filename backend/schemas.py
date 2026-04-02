@@ -58,6 +58,16 @@ class ProgressUpdate(BaseModel):
     progress_json: dict[str, bool]
 
 
+class TopicUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class TopicPaperUpdate(BaseModel):
+    progress_json: Optional[dict[str, bool]] = None
+    order: Optional[int] = None
+
+
 class AnnotationCreate(BaseModel):
     note_text: str
     tags: list[str] = []

@@ -79,6 +79,7 @@ export interface TopicPaper {
   paper_id: string;
   order: number;
   progress_json: Record<string, boolean>;
+  available_modules?: string[];
   paper?: Paper;
 }
 
