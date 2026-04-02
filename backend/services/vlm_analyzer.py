@@ -51,18 +51,16 @@ _EXT_TO_MEDIA_TYPE = {
 # ---------------------------------------------------------------------------
 
 def _provider() -> str:
-    return os.getenv("VLM_PROVIDER", "anthropic").lower()
+    return get_effective_vlm_config()["provider"]
 
 
 def _vlm_model() -> str:
-    if _provider() == "anthropic":
-        return os.getenv("VLM_MODEL", "claude-opus-4-6")
-    return os.getenv("VLM_MODEL", "glm-4v-plus")
+    return get_effective_vlm_config()["vlm_model"]
 
 
 def _vlm_text_model() -> str:
-    """Model for text-only calls (falls back to VLM_MODEL if not set)."""
-    return os.getenv("VLM_TEXT_MODEL", _vlm_model())
+    cfg = get_effective_vlm_config()
+    return cfg["vlm_text_model"] or cfg["vlm_model"]
 
 
 # Lazy singletons
@@ -70,11 +68,60 @@ _anthropic_client = None
 _openai_client = None
 
 
+# ---------------------------------------------------------------------------
+# Effective config — DB first, env fallback
+# ---------------------------------------------------------------------------
+
+def get_effective_vlm_config(db=None) -> dict:
+    """
+    Returns the effective VLM configuration as a plain dict.
+    Priority: DB model_config row (user_id=1) → environment variables → built-in defaults.
+    Accepts an optional SQLAlchemy Session; if None, falls back to env only.
+    """
+    row = None
+    if db is not None:
+        try:
+            from models.settings import ModelConfig
+            row = db.query(ModelConfig).filter(ModelConfig.user_id == 1).first()
+        except Exception:
+            row = None
+
+    if row and row.provider:
+        return {
+            "provider": row.provider,
+            "vlm_model": row.vlm_model or os.getenv("VLM_MODEL", "glm-4v-plus"),
+            "vlm_text_model": row.vlm_text_model or row.vlm_model or os.getenv("VLM_TEXT_MODEL", os.getenv("VLM_MODEL", "glm-4v-plus")),
+            "vlm_base_url": row.vlm_base_url or os.getenv("VLM_BASE_URL", "https://api.openai.com/v1"),
+            "vlm_api_key": row.vlm_api_key or os.getenv("VLM_API_KEY", ""),
+            "anthropic_api_key": row.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", ""),
+            "source": "database",
+        }
+
+    env_provider = os.getenv("VLM_PROVIDER", "anthropic").lower()
+    return {
+        "provider": env_provider,
+        "vlm_model": os.getenv("VLM_MODEL", "claude-opus-4-6") if env_provider == "anthropic" else os.getenv("VLM_MODEL", "glm-4v-plus"),
+        "vlm_text_model": os.getenv("VLM_TEXT_MODEL", os.getenv("VLM_MODEL", "")),
+        "vlm_base_url": os.getenv("VLM_BASE_URL", "https://api.openai.com/v1"),
+        "vlm_api_key": os.getenv("VLM_API_KEY", ""),
+        "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY", ""),
+        "source": "environment",
+    }
+
+
+def invalidate_vlm_clients() -> None:
+    """Reset the lazy client singletons so next call re-creates them with fresh config."""
+    global _anthropic_client, _openai_client
+    _anthropic_client = None
+    _openai_client = None
+
+
 def _get_anthropic_client():
     global _anthropic_client
     if _anthropic_client is None:
         import anthropic
-        _anthropic_client = anthropic.Anthropic()
+        cfg = get_effective_vlm_config()
+        _anthropic_client = anthropic.Anthropic(api_key=cfg["anthropic_api_key"] or None)
     return _anthropic_client
 
 
@@ -82,9 +129,10 @@ def _get_openai_client():
     global _openai_client
     if _openai_client is None:
         from openai import OpenAI
+        cfg = get_effective_vlm_config()
         _openai_client = OpenAI(
-            api_key=os.getenv("VLM_API_KEY", ""),
-            base_url=os.getenv("VLM_BASE_URL", "https://api.openai.com/v1"),
+            api_key=cfg["vlm_api_key"],
+            base_url=cfg["vlm_base_url"],
         )
     return _openai_client
 
