@@ -79,15 +79,25 @@ export default function NotesHubPage() {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingMaterial, setPendingMaterial] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setLoading(true);
     setNotes([]);
+    setSearchQuery("");
     getNotesByModule(activeTab)
       .then(setNotes)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [activeTab]);
+
+  const filteredNotes = searchQuery.trim()
+    ? notes.filter(
+        (n) =>
+          n.note_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          n.paper_title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : notes;
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-0 p-6">
@@ -134,10 +144,22 @@ export default function NotesHubPage() {
             </p>
             {!loading && (
               <span className="text-xs text-gray-400">
-                {notes.length === 0 ? "No notes yet" : `${notes.length} note${notes.length > 1 ? "s" : ""}`}
+                {filteredNotes.length !== notes.length
+                  ? `${filteredNotes.length} / ${notes.length}`
+                  : notes.length === 0 ? "No notes yet" : `${notes.length} note${notes.length > 1 ? "s" : ""}`}
               </span>
             )}
           </div>
+
+          {/* Search */}
+          {notes.length > 0 && (
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search notes…"
+              className="mb-3 w-full rounded-md border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100"
+            />
+          )}
 
           {loading ? (
             <p className="text-sm text-gray-400">Loading...</p>
@@ -150,13 +172,17 @@ export default function NotesHubPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 280px)" }}>
-              {notes.map((note) => (
-                <NoteCard
-                  key={note.annotation_id}
-                  note={note}
-                  onAddToMaterials={(text) => setPendingMaterial(text)}
-                />
-              ))}
+              {filteredNotes.length === 0 ? (
+                <p className="text-sm text-gray-400">No matching notes.</p>
+              ) : (
+                filteredNotes.map((note) => (
+                  <NoteCard
+                    key={note.annotation_id}
+                    note={note}
+                    onAddToMaterials={(text) => setPendingMaterial(text)}
+                  />
+                ))
+              )}
             </div>
           )}
         </div>

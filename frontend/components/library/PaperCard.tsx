@@ -7,27 +7,42 @@ import type { Paper } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ModuleChip from "./ModuleChip";
 import AddToTopicButton from "@/components/shared/AddToTopicButton";
-import { deletePaper } from "@/lib/api";
+import { deletePaper, reprocessPaper } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function PaperCard({
   paper,
   onDelete,
+  onRetry,
 }: {
   paper: Paper;
   onDelete?: (id: string) => void;
+  onRetry?: (updated: Paper) => void;
 }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [paperTopics, setPaperTopics] = useState<{ id: string; name: string }[]>([]);
+  const [retrying, setRetrying] = useState(false);
 
   const items = paper.content_items ?? [];
   const archFigure = items.find((i) => i.module_type === "arch_figure" && i.image_path);
   const hasUnclassified =
     paper.processing_status === "done" && items.some((i) => i.module_type === "other");
+
+  async function handleRetry() {
+    setRetrying(true);
+    try {
+      const updated = await reprocessPaper(paper.id);
+      onRetry?.(updated);
+    } catch {
+      // silently ignore; status will remain failed
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -76,6 +91,15 @@ export default function PaperCard({
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <StatusBadge status={paper.processing_status} />
+            {paper.processing_status === "failed" && (
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="rounded border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-600 hover:bg-orange-100 disabled:opacity-50"
+              >
+                {retrying ? "Retrying…" : "Retry"}
+              </button>
+            )}
             {(["arch_figure", "abstract", "eval_figure"] as const).map((mt) => {
               const item = items.find((i) => i.module_type === mt);
               return item ? <ModuleChip key={mt} moduleType={mt} status={item.processing_status} /> : null;

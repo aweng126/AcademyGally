@@ -439,6 +439,34 @@ def confirm_items(
     return {"status": "ok", "analyzing": len(to_analyze)}
 
 
+@router.post("/{paper_id}/reprocess")
+def reprocess_paper(
+    paper_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Re-trigger the processing pipeline for a paper that failed."""
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    if paper.processing_status not in ("failed", "done"):
+        raise HTTPException(status_code=400, detail="Paper is not in a reprocessable state")
+
+    # Remove existing content items so the pipeline starts fresh
+    from models.annotation import UserAnnotation
+    item_ids = [i.id for i in db.query(ContentItem).filter(ContentItem.paper_id == paper_id).all()]
+    if item_ids:
+        db.query(UserAnnotation).filter(UserAnnotation.item_id.in_(item_ids)).delete(synchronize_session=False)
+    db.query(ContentItem).filter(ContentItem.paper_id == paper_id).delete(synchronize_session=False)
+
+    paper.processing_status = "pending"
+    db.commit()
+
+    background_tasks.add_task(_process_paper_bg, paper.id, paper.pdf_path)
+    items = db.query(ContentItem).filter(ContentItem.paper_id == paper_id).all()
+    return _paper_out(paper, items)
+
+
 @router.delete("/{paper_id}", status_code=204)
 def delete_paper(paper_id: str, db: Session = Depends(get_db)):
     import shutil

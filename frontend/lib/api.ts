@@ -72,6 +72,9 @@ export async function deletePaper(id: string): Promise<void> {
   await request<void>(`/papers/${id}`, { method: "DELETE" });
 }
 
+export const reprocessPaper = (id: string) =>
+  request<Paper>(`/papers/${id}/reprocess`, { method: "POST" });
+
 export const confirmItems = (
   paperId: string,
   confirmations: { item_id: string; module_type: string }[]

@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import type { Paper, ModuleType } from "@/lib/types";
-import { getFullAnalysis } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import type { Paper, ModuleType, Topic } from "@/lib/types";
+import { getFullAnalysis, getTopics } from "@/lib/api";
 import ModuleAnalysisPanel from "./ModuleAnalysisPanel";
 import StatusBadge from "@/components/shared/StatusBadge";
 import AddToTopicButton from "@/components/shared/AddToTopicButton";
@@ -11,8 +12,10 @@ import AddToTopicButton from "@/components/shared/AddToTopicButton";
 const MODULE_ORDER: ModuleType[] = ["abstract", "arch_figure", "eval_figure", "algorithm"];
 
 export default function FullAnalysisPage({ paperId }: { paperId: string }) {
+  const router = useRouter();
   const [paper, setPaper] = useState<Paper | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paperTopics, setPaperTopics] = useState<Topic[]>([]);
 
   const load = useCallback(() => {
     getFullAnalysis(paperId)
@@ -24,6 +27,12 @@ export default function FullAnalysisPage({ paperId }: { paperId: string }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    getTopics()
+      .then((topics) => setPaperTopics(topics.filter((t) => t.papers?.some((tp) => tp.paper_id === paperId))))
+      .catch(console.error);
+  }, [paperId]);
 
   // Poll while any item is still processing
   useEffect(() => {
@@ -72,6 +81,19 @@ export default function FullAnalysisPage({ paperId }: { paperId: string }) {
           <p className="text-sm text-gray-500">
             {[paper.authors, paper.venue, paper.year].filter(Boolean).join(" · ")}
           </p>
+        )}
+        {paperTopics.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {paperTopics.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => router.push(`/topics/${t.id}`)}
+                className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition"
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
         )}
         {hasUnclassified && (
           <div className="mt-1 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
