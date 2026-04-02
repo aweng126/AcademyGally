@@ -3,13 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Paper } from "@/lib/types";
+import type { Paper, ArchFigureAnalysis, AbstractAnalysis, EvalFigureAnalysis, AlgorithmAnalysis } from "@/lib/types";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ModuleChip from "./ModuleChip";
 import AddToTopicButton from "@/components/shared/AddToTopicButton";
 import { deletePaper, reprocessPaper } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+const MODULE_SECTION: Record<string, { label: string; color: string }> = {
+  abstract:    { label: "Abstract",       color: "bg-blue-50 border-blue-100 text-blue-700" },
+  arch_figure: { label: "Design",         color: "bg-purple-50 border-purple-100 text-purple-700" },
+  eval_figure: { label: "Evaluation",     color: "bg-amber-50 border-amber-100 text-amber-700" },
+  algorithm:   { label: "Algorithm",      color: "bg-green-50 border-green-100 text-green-700" },
+};
+
+const MODULE_ORDER = ["abstract", "arch_figure", "eval_figure", "algorithm"];
 
 export default function PaperCard({
   paper,
@@ -26,11 +35,16 @@ export default function PaperCard({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [paperTopics, setPaperTopics] = useState<{ id: string; name: string }[]>([]);
   const [retrying, setRetrying] = useState(false);
+  const [modulesExpanded, setModulesExpanded] = useState(false);
 
   const items = paper.content_items ?? [];
   const archFigure = items.find((i) => i.module_type === "arch_figure" && i.image_path);
   const hasUnclassified =
     paper.processing_status === "done" && items.some((i) => i.module_type === "other");
+
+  const analyzedItems = items
+    .filter((i) => i.processing_status === "done" && i.module_type !== "other")
+    .sort((a, b) => MODULE_ORDER.indexOf(a.module_type) - MODULE_ORDER.indexOf(b.module_type));
 
   async function handleRetry() {
     setRetrying(true);
@@ -130,6 +144,85 @@ export default function PaperCard({
           </div>
         </div>
       </div>
+
+      {/* Module expand toggle */}
+      {analyzedItems.length > 0 && (
+        <button
+          onClick={() => setModulesExpanded((v) => !v)}
+          className="flex w-full items-center gap-2 border-t px-4 py-2 text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition"
+        >
+          <span className={`transition-transform duration-150 ${modulesExpanded ? "rotate-90" : ""}`}>▶</span>
+          <span>{modulesExpanded ? "Hide" : "Show"} modules</span>
+          <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500">
+            {analyzedItems.length}
+          </span>
+        </button>
+      )}
+
+      {/* Module content preview */}
+      {modulesExpanded && analyzedItems.length > 0 && (
+        <div className="border-t bg-gray-50 px-4 pb-4 pt-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {analyzedItems.map((item) => {
+              const sec = MODULE_SECTION[item.module_type];
+              const a = item.analysis_json;
+
+              let preview: React.ReactNode = null;
+
+              if (item.module_type === "abstract" && a) {
+                const abs = a as AbstractAnalysis;
+                preview = (
+                  <p className="line-clamp-2 text-xs text-gray-600">
+                    {abs.problem_statement || abs.proposed_approach || ""}
+                  </p>
+                );
+              } else if (item.module_type === "arch_figure") {
+                const arch = a as ArchFigureAnalysis | null;
+                preview = (
+                  <div className="flex gap-2">
+                    {item.image_path && (
+                      <img
+                        src={`${API_URL}/figures/${item.image_path}`}
+                        alt="arch"
+                        className="h-12 w-16 shrink-0 rounded object-contain bg-white border"
+                      />
+                    )}
+                    {arch?.core_problem && (
+                      <p className="line-clamp-3 text-xs text-gray-600">{arch.core_problem}</p>
+                    )}
+                  </div>
+                );
+              } else if (item.module_type === "eval_figure" && a) {
+                const ev = a as EvalFigureAnalysis;
+                preview = (
+                  <p className="line-clamp-2 text-xs text-gray-600">{ev.headline_result}</p>
+                );
+              } else if (item.module_type === "algorithm" && a) {
+                const alg = a as AlgorithmAnalysis;
+                preview = (
+                  <p className="line-clamp-2 text-xs text-gray-600">
+                    <span className="font-medium">{alg.algorithm_name}</span>
+                    {alg.purpose ? ` — ${alg.purpose}` : ""}
+                  </p>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.id}
+                  href={`/papers/${paper.id}`}
+                  className={`flex flex-col gap-1.5 rounded-lg border p-3 transition hover:shadow-sm ${sec?.color ?? "bg-gray-50 border-gray-100"}`}
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+                    {sec?.label ?? item.module_type}
+                  </span>
+                  {preview ?? <p className="text-xs text-gray-400 italic">Analysis complete</p>}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Inline error */}
       {deleteError && (

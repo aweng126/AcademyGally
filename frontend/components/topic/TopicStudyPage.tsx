@@ -8,11 +8,17 @@ import { getTopic, updateTopic, deleteTopic, removePaperFromTopic, updatePaperOr
 import StudyFocusSelector, { type StudyFocus, getStoredFocus } from "./StudyFocusSelector";
 import SeriesPaperRow from "./SeriesPaperRow";
 
+// Map each section to the module_type(s) shown in SeriesPaperRow
 const FOCUS_MODULE_MAP: Record<StudyFocus, ModuleType[]> = {
-  all: ["abstract", "arch_figure", "eval_figure"],
-  abstract: ["abstract"],
-  arch_figure: ["arch_figure"],
-  eval_figure: ["eval_figure"],
+  all:            ["abstract", "arch_figure", "eval_figure", "algorithm"],
+  abstract:       ["abstract"],
+  introduction:   [],   // not yet extracted
+  background:     [],   // not yet extracted
+  design:         ["arch_figure"],
+  implementation: ["algorithm"],
+  evaluation:     ["eval_figure"],
+  discussion:     [],   // not yet extracted
+  conclusion:     [],   // not yet extracted
 };
 
 export default function TopicStudyPage({ topicId }: { topicId: string }) {
@@ -249,6 +255,7 @@ export default function TopicStudyPage({ topicId }: { topicId: string }) {
               tp={tp}
               topicId={topicId}
               visibleModules={focusModules}
+              currentFocus={focus}
               onProgressUpdate={handleProgressUpdate}
               onRemove={handleRemovePaper}
               onMoveUp={(pid) => handleReorderPaper(pid, "up")}

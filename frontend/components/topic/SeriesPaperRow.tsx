@@ -6,20 +6,22 @@ import type { TopicPaper, ContentItem, ModuleType } from "@/lib/types";
 import { getContent, updatePaperProgress } from "@/lib/api";
 import ProgressBar from "@/components/shared/ProgressBar";
 import ModuleAnalysisPanel from "@/components/detail/ModuleAnalysisPanel";
+import { type StudyFocus, SECTION_MODULE_MAP, SECTION_LABELS } from "./StudyFocusSelector";
 
 const MODULE_ORDER: ModuleType[] = ["abstract", "arch_figure", "eval_figure", "algorithm"];
 
 const MODULE_LABEL: Record<string, string> = {
-  abstract: "Abstract",
-  arch_figure: "Architecture Figure",
-  eval_figure: "Evaluation Figure",
-  algorithm: "Algorithm",
+  abstract:    "Abstract",
+  arch_figure: "Design",
+  eval_figure: "Evaluation",
+  algorithm:   "Implementation",
 };
 
 interface Props {
   tp: TopicPaper;
   topicId: string;
   visibleModules: ModuleType[];
+  currentFocus: StudyFocus;
   onProgressUpdate: (paperId: string, progress: Record<string, boolean>) => void;
   onRemove: (paperId: string) => void;
   onMoveUp: (paperId: string) => void;
@@ -32,6 +34,7 @@ export default function SeriesPaperRow({
   tp,
   topicId,
   visibleModules,
+  currentFocus,
   onProgressUpdate,
   onRemove,
   onMoveUp,
@@ -39,6 +42,8 @@ export default function SeriesPaperRow({
   isFirst,
   isLast,
 }: Props) {
+  // Is this section locked (no module_type mapped yet)?
+  const isSectionLocked = currentFocus !== "all" && SECTION_MODULE_MAP[currentFocus] === null;
   const [expanded, setExpanded] = useState(false);
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -160,9 +165,19 @@ export default function SeriesPaperRow({
           )}
           {loadingItems ? (
             <p className="text-sm text-gray-400">Loading content...</p>
+          ) : isSectionLocked ? (
+            <div className="rounded-md border border-dashed border-gray-200 bg-white p-6 text-center">
+              <p className="text-2xl mb-2">🔒</p>
+              <p className="text-sm font-medium text-gray-500">
+                {SECTION_LABELS[currentFocus]} not yet extracted
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                Automatic extraction of this section is planned for Phase 2.
+              </p>
+            </div>
           ) : seriesItems.length === 0 ? (
             <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-              No analyzed content yet for this focus.
+              No analyzed content yet for this section.
               {items.length === 0 && (
                 <span>
                   {" "}
@@ -186,7 +201,7 @@ export default function SeriesPaperRow({
                         {idx + 1}
                       </span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        {MODULE_LABEL[item.module_type] ?? item.module_type}
+                        {MODULE_LABEL[item.module_type] ?? item.module_type.replace("_", " ")}
                       </span>
                     </div>
                     <label className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
