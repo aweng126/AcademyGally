@@ -1,4 +1,4 @@
-import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry, CoachResponse, PhraseItem, PhraseFavorite } from "./types";
+import type { Paper, ContentItem, Topic, TopicPaper, UserAnnotation, PaperMetadataResponse, VenueEntry, CoachResponse, PhraseItem, PhraseFavorite, UserProfile, ModelConfigOut, ModelConfigIn, TestResult, ProviderPreset } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -179,3 +179,26 @@ export const getPhrases = (params?: { function?: string; venue?: string }) => {
 
 export const getPhraseFavorites = () =>
   request<PhraseFavorite[]>("/content/phrases/favorites");
+
+// ─── Settings ───────────────────────────────────────────────────────────────
+
+export const getProfile = () => request<UserProfile>("/settings/profile");
+
+export const updateProfile = (body: Partial<UserProfile>) =>
+  request<UserProfile>("/settings/profile", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+
+export const getModelConfig = () => request<ModelConfigOut>("/settings/model");
+
+export const updateModelConfig = (body: ModelConfigIn) =>
+  request<ModelConfigOut>("/settings/model", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+
+export const testModelConnection = () =>
+  request<TestResult>("/settings/model/test", { method: "POST" });
+
+export const getModelPresets = () => request<ProviderPreset[]>("/settings/model/presets");

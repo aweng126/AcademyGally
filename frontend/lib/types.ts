@@ -200,3 +200,61 @@ export interface PhraseFavorite {
   text: string;
   tags: string[];
 }
+
+// ─── Settings ─────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  display_name: string | null;
+  institution: string | null;
+  research_area: string | null;
+  research_interests: string[];
+  academic_stage: string | null;
+  default_view: "library" | "topic" | "browse";
+  analysis_language: "english" | "chinese" | "auto";
+  auto_retry: boolean;
+}
+
+export interface ModelConfigOut {
+  preset: string | null;
+  provider: string | null;
+  anthropic_api_key_hint: string | null;
+  vlm_api_key_hint: string | null;
+  vlm_base_url: string | null;
+  vlm_model: string | null;
+  vlm_text_model: string | null;
+  last_test_status: "ok" | "failed" | null;
+  last_test_latency_ms: number | null;
+  last_tested_at: string | null;
+  effective_provider: string;
+  effective_model: string;
+  config_source: "database" | "environment";
+}
+
+export interface ModelConfigIn {
+  preset?: string;
+  provider?: string;
+  anthropic_api_key?: string;
+  vlm_api_key?: string;
+  vlm_base_url?: string;
+  vlm_model?: string;
+  vlm_text_model?: string | null;
+}
+
+export interface TestResult {
+  status: "ok" | "failed";
+  latency_ms: number | null;
+  model: string | null;
+  provider: string | null;
+  error: string | null;
+}
+
+export interface ProviderPreset {
+  id: string;
+  label: string;
+  provider: "anthropic" | "openai_compatible";
+  base_url: string | null;
+  vision_models: string[];
+  text_models: string[];
+  api_key_hint: string;
+  docs_url: string;
+}
